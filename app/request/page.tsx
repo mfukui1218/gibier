@@ -1,8 +1,7 @@
 // app/request/page.tsx
 "use client";
 
-import { useState } from "react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { db } from "@/lib/firebase";
@@ -40,7 +39,10 @@ const inputStyle: CSSProperties = {
   boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
 };
 
-export default function RequestPage() {
+// ---------------------------
+// useSearchParams を使う本体
+// ---------------------------
+function RequestPageInner() {
   const user = useAuthUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -281,5 +283,22 @@ LINEで住所教えてくれても可（"LINE" と送ればOK）`}
         )}
       </div>
     </main>
+  );
+}
+
+// ---------------------------
+// ページ本体（Suspense でラップ）
+// ---------------------------
+export default function RequestPage() {
+  return (
+    <Suspense
+      fallback={
+        <main style={{ padding: 24, textAlign: "center", color: "#fff" }}>
+          読み込み中...
+        </main>
+      }
+    >
+      <RequestPageInner />
+    </Suspense>
   );
 }
