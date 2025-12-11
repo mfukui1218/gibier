@@ -133,12 +133,11 @@ export default function DashboardPage() {
               e.currentTarget.style.transform = "translateY(0)";
             }}
           >
-            ジビエ部位一覧へ
+            HOME
           </button>
-
           <button
             type="button"
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push("/gibier")}
             style={buttonStyle}
             onMouseOver={(e) => {
               e.currentTarget.style.background = "rgba(255,255,255,0.25)";
@@ -149,7 +148,23 @@ export default function DashboardPage() {
               e.currentTarget.style.transform = "translateY(0)";
             }}
           >
-            プロフィール編集
+            ジビエ部位一覧へ
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/mypage")}
+            style={buttonStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+          >
+            マイページへ
           </button>
 
           <button

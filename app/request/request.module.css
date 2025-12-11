@@ -1,0 +1,146 @@
+/* app/request/request.module.css */
+
+.page {
+  padding: 24px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.loading {
+  margin-top: 80px;
+  color: #ffffff;
+  text-align: center;
+  font-size: 14px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.subtitle {
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 16px;
+  color: #dddddd;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.label {
+  margin-bottom: 4px;
+}
+
+.select,
+.input,
+.textarea,
+.amountInput {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cccccc;
+  background: #ffffff;
+  color: #000000;
+  font-size: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.textarea {
+  padding: 12px;
+  min-height: 96px;
+  resize: vertical;
+  white-space: pre-line;
+}
+
+/* 希望量まわり */
+.amountWrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.amountInput {
+  width: 160px;
+  padding-right: 28px;
+}
+
+.amountUnit {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #333333;
+  font-weight: bold;
+}
+
+/* ボタン */
+.button {
+  margin-top: 14px;
+  padding: 12px 20px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.25s;
+}
+
+.button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+
+/* メッセージ */
+.messageOk {
+  margin-top: 16px;
+  color: #b4ffb4;
+  text-align: center;
+  font-size: 13px;
+}
+
+.messageError {
+  margin-top: 16px;
+  color: #ff8080;
+  text-align: center;
+  font-size: 13px;
+}

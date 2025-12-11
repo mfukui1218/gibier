@@ -2,46 +2,34 @@
 "use client";
 
 import { useState } from "react";
-import type { CSSProperties } from "react";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   OAuthProvider,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, app } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
-// 共通ボタンスタイル（signup と揃える）
-const buttonStyle: CSSProperties = {
-  padding: "12px 20px",
-  width: "100%",
-  background: "rgba(255,255,255,0.15)",
-  border: "1px solid rgba(255,255,255,0.6)",
-  color: "#fff",
-  borderRadius: 10,
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: "pointer",
-  backdropFilter: "blur(6px)",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-  transition: "all 0.25s",
-  marginTop: 14,
-};
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import "./login.css"; // ★ 追加
 
-// 入力欄スタイル（signup と揃える）
-const inputStyle: CSSProperties = {
-  display: "block",
-  width: "100%",
-  marginTop: 4,
-  padding: "10px",
-  borderRadius: 8,
-  border: "1px solid #ccc",
-  background: "#ffffff",
-  color: "#000000",
-  fontSize: 16,
-  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-};
+const ADMIN_EMAIL = "ttnetnzua@gmail.com";
+
+async function checkAllowedOrAdmin(email: string) {
+  const lower = email.toLowerCase();
+
+  if (lower === ADMIN_EMAIL.toLowerCase()) return true;
+
+  const functions = getFunctions(app);
+  const checkAllowed = httpsCallable(functions, "checkAllowedEmail");
+  const res = await checkAllowed({ email: lower });
+  const data = res.data as any;
+
+  return !!data.allowed;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,7 +38,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Email + Password ログイン
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -75,95 +62,123 @@ export default function LoginPage() {
     }
   }
 
-  // Googleログイン
   async function handleGoogleLogin() {
-    setError("");
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      router.push("/profile");
-    } catch (err: any) {
-      console.error(err);
+  setError("");
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
 
-      if (err.code === "auth/popup-closed-by-user") {
-        return;
-      }
+    const user = result.user;
+    const email = user.email?.toLowerCase() ?? "";
 
-      if (err.code === "auth/account-exists-with-different-credential") {
-        setError("別のログイン方法で既に登録されています。メールアドレスでログインを試してください。");
-      } else {
-        setError("Googleログインに失敗しました");
-      }
+    if (!email) {
+      await user.delete();
+      setError("Google からメールが取得できませんでした。");
+      return;
+    }
+
+    // ★ allowedEmail チェック（最優先）
+    const allowed = await checkAllowedOrAdmin(email);
+    if (!allowed) {
+      await user.delete(); // Firebase Auth に作られたアカウントを即削除
+      setError("このメールアドレスではログインできません。");
+      return;
+    }
+
+    // ★ allowed 通過 → Firestore に初回登録
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        email,
+        name: user.displayName ?? "",
+        provider: "google",
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    router.push("/profile");
+  } catch (err: any) {
+    console.error(err);
+    if (err.code === "auth/popup-closed-by-user") return;
+
+    if (err.code === "auth/account-exists-with-different-credential") {
+      setError("別の方法で登録済みです。メールアドレスでログインしてください。");
+    } else {
+      setError("Googleログインに失敗しました");
     }
   }
+}
 
-  // Appleログイン
-  async function handleAppleLogin() {
-    setError("");
-    try {
-      const provider = new OAuthProvider("apple.com");
-      provider.addScope("email");
-      provider.addScope("name");
+async function handleAppleLogin() {
+  setError("");
+  try {
+    const provider = new OAuthProvider("apple.com");
+    provider.addScope("email");
+    provider.addScope("name");
 
-      await signInWithPopup(auth, provider);
-      router.push("/profile");
-    } catch (err: any) {
-      console.error(err);
+    const result = await signInWithPopup(auth, provider);
 
-      if (err.code === "auth/popup-closed-by-user") {
-        return;
-      }
+    const user = result.user;
+    const email = user.email?.toLowerCase() ?? "";
 
-      if (err.code === "auth/account-exists-with-different-credential") {
-        setError("別のログイン方法で既に登録されています。メールアドレスでログインを試してください。");
-      } else {
-        setError("Appleログインに失敗しました");
-      }
+    // Apple は 2回目以降 email を返さない → この場合も弾く
+    if (!email) {
+      await user.delete();
+      setError("Apple からメールを取得できませんでした。");
+      return;
+    }
+
+    // ★ allowedEmail チェック（ここで確実に弾く）
+    const allowed = await checkAllowedOrAdmin(email);
+    if (!allowed) {
+      await user.delete();
+      setError("このメールアドレスではログインできません。");
+      return;
+    }
+
+    // ★ allowed 通過 → Firestore に初回保存
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        email,
+        name: user.displayName ?? "",
+        provider: "apple",
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    router.push("/profile");
+  } catch (err: any) {
+    console.error(err);
+
+    if (err.code === "auth/popup-closed-by-user") return;
+
+    if (err.code === "auth/account-exists-with-different-credential") {
+      setError("別の方法で登録済みです。メールアドレスでログインしてください。");
+    } else {
+      setError("Appleログインに失敗しました");
     }
   }
+}
+
+
 
   return (
-    <main
-      style={{
-        padding: 24,
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 360,
-          background: "rgba(0,0,0,0.35)",
-          borderRadius: 16,
-          padding: 24,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-          border: "1px solid rgba(255,255,255,0.2)",
-          backdropFilter: "blur(10px)",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            marginBottom: 16,
-            textAlign: "center",
-            textShadow: "0 2px 4px rgba(0,0,0,0.6)",
-          }}
-        >
-          ログイン
-        </h1>
+    <main className="login-root">
+      <div className="login-card">
+        <h1 className="login-title">ログイン</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}
-        >
+        <form className="login-form" onSubmit={handleSubmit}>
           <input
             type="email"
             placeholder="メールアドレス"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
+            className="login-input"
           />
 
           <input
@@ -171,36 +186,17 @@ export default function LoginPage() {
             placeholder="パスワード"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
+            className="login-input"
           />
 
-          <button
-            type="submit"
-            style={buttonStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
+          <button type="submit" className="login-button">
             ログイン
           </button>
 
           <button
             type="button"
             onClick={handleGoogleLogin}
-            style={buttonStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
+            className="login-button"
           >
             Googleでログイン
           </button>
@@ -208,15 +204,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleAppleLogin}
-            style={buttonStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
+            className="login-button"
           >
             Appleでログイン
           </button>
@@ -224,25 +212,13 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => router.push("/signup")}
-            style={buttonStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
+            className="login-button"
           >
             アカウント作成
           </button>
         </form>
 
-        {error && (
-          <p style={{ marginTop: 12, color: "#ff8080" }}>
-            {error}
-          </p>
-        )}
+        {error && <p className="login-error">{error}</p>}
       </div>
     </main>
   );

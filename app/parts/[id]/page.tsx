@@ -102,7 +102,7 @@ export default function PartPage() {
           </h1>
           <p style={{ marginBottom: 16 }}>この部位は登録されていません。</p>
           <button
-            onClick={() => router.push("/home")}
+            onClick={() => router.push("/gibier")}
             style={buttonStyle}
             onMouseOver={(e) => {
               e.currentTarget.style.background = "rgba(255,255,255,0.25)";
