@@ -9,8 +9,14 @@ import {
   getDocs,
   setDoc,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
 export type Part = {
   id: string;
@@ -20,6 +26,7 @@ export type Part = {
   price: string;
   stock: string;
   imageUrl: string;
+  imagePath?: string; // ✅ 追加（Storageのパス）
 };
 
 export type NewPartInput = {
@@ -45,8 +52,7 @@ export function useParts() {
   const loadParts = async () => {
     setLoading(true);
     try {
-      const colRef = collection(db, "parts");
-      const snap = await getDocs(colRef);
+      const snap = await getDocs(collection(db, "parts"));
 
       const nextParts: Part[] = snap.docs.map((d) => {
         const data = d.data() as any;
@@ -55,15 +61,10 @@ export function useParts() {
           name: data.name ?? "",
           animal: data.animal ?? "",
           description: data.description ?? "",
-          price:
-            data.price === undefined || data.price === null
-              ? ""
-              : String(data.price),
-          stock:
-            data.stock === undefined || data.stock === null
-              ? ""
-              : String(data.stock),
+          price: data.price == null ? "" : String(data.price),
+          stock: data.stock == null ? "" : String(data.stock),
           imageUrl: data.imageUrl ?? "",
+          imagePath: data.imagePath ?? undefined, // ✅ 読む
         };
       });
 
@@ -85,7 +86,9 @@ export function useParts() {
   }, []);
 
   const updatePartField = (id: string, field: keyof Part, value: string) => {
-    setParts((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+    setParts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    );
   };
 
   const savePart = async (part: Part) => {
@@ -99,6 +102,7 @@ export function useParts() {
           price: part.price ? Number(part.price) : null,
           stock: part.stock ? Number(part.stock) : null,
           imageUrl: part.imageUrl || null,
+          imagePath: part.imagePath || null, // ✅ これも保存
         },
         { merge: true }
       );
@@ -110,19 +114,7 @@ export function useParts() {
     }
   };
 
-  const deletePart = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "parts", id));
-      setParts((prev) => prev.filter((p) => p.id !== id));
-      showMessage("削除しました");
-    } catch (e) {
-      console.error(e);
-      showMessage("削除に失敗しました");
-      throw e;
-    }
-  };
-
-  // 既存部位の画像アップロード（UUID名 + snapshot.refでURL取得）
+  // ✅ 画像アップロード（imageUrl + imagePath を保存）
   const uploadPartImage = async (partId: string, file: File) => {
     try {
       showMessage("画像アップロード中...");
@@ -134,16 +126,27 @@ export function useParts() {
 
       const ext = file.name.split(".").pop() || "jpg";
       const fileName = `${crypto.randomUUID()}.${ext}`;
-      const objectPath = `parts/${partId}/${fileName}`;
 
-      const storageRef = ref(storage, objectPath);
-      const snapshot = await uploadBytes(storageRef, file);
+      // Storage パス（Firestoreのidが安全じゃない可能性があるので一応安全化）
+      const safePartId = partId.replace(/[^\w\-]/g, "_");
+      const objectPath = `parts/${safePartId}/${fileName}`;
+
+      const sref = storageRef(storage, objectPath);
+      const snapshot = await uploadBytes(sref, file);
       const url = await getDownloadURL(snapshot.ref);
 
-      await setDoc(doc(db, "parts", partId), { imageUrl: url }, { merge: true });
+      // ✅ Firestore に両方保存
+      await setDoc(
+        doc(db, "parts", partId),
+        { imageUrl: url, imagePath: objectPath },
+        { merge: true }
+      );
 
+      // ✅ 画面にも反映
       setParts((prev) =>
-        prev.map((p) => (p.id === partId ? { ...p, imageUrl: url } : p))
+        prev.map((p) =>
+          p.id === partId ? { ...p, imageUrl: url, imagePath: objectPath } : p
+        )
       );
 
       showMessage("画像を更新しました");
@@ -155,73 +158,130 @@ export function useParts() {
     }
   };
 
-  // 新しい部位追加（画像あればアップロード）
-const addPart = async (input: NewPartInput) => {
-  const trimmedId = input.id.trim();
-  const trimmedName = input.name.trim();
+  // ✅ 画像だけ削除（部位は残す）
+  const deletePartImage = async (partId: string) => {
+    const part = parts.find((p) => p.id === partId);
+    if (!part) return;
 
-  if (!trimmedId || !trimmedName) {
-    showMessage("部位IDと部位名は必須です");
-    throw new Error("validation");
-  }
+    try {
+      // Storage削除（pathがあるときだけ）
+      if (part.imagePath) {
+        await deleteObject(storageRef(storage, part.imagePath));
+      }
 
-  if (parts.some((p) => p.id === trimmedId)) {
-    showMessage("同じIDの部位が既に存在します");
-    throw new Error("duplicate-id");
-  }
+      // Firestore: imageUrl / imagePath を消す
+      await updateDoc(doc(db, "parts", partId), {
+        imageUrl: null,
+        imagePath: null,
+      });
 
-  try {
-    // ① Firestore 用 ID（元のままでOK）
-    await setDoc(doc(db, "parts", trimmedId), {
-      name: trimmedName || null,
-      animal: input.animal || null,
-      description: input.description || null,
-      price: input.price ? Number(input.price) : null,
-      stock: input.stock ? Number(input.stock) : null,
-      imageUrl: null,
-    });
-
-    let imageUrl = "";
-
-    // ② Storage 用 ID（安全化）
-    if (input.imageFile) {
-      const safePartId = trimmedId.replace(/[^\w\-]/g, "_");
-
-      const ext = input.imageFile.name.split(".").pop() || "jpg";
-      const fileName = `${crypto.randomUUID()}.${ext}`;
-      const objectPath = `parts/${safePartId}/${fileName}`;
-
-      const storageRef = ref(storage, objectPath);
-      const snapshot = await uploadBytes(storageRef, input.imageFile);
-      imageUrl = await getDownloadURL(snapshot.ref);
-
-      // Firestore に URL 保存
-      await setDoc(
-        doc(db, "parts", trimmedId),
-        { imageUrl },
-        { merge: true }
+      // 画面反映
+      setParts((prev) =>
+        prev.map((p) =>
+          p.id === partId ? { ...p, imageUrl: "", imagePath: undefined } : p
+        )
       );
+
+      showMessage("画像を削除しました");
+    } catch (e) {
+      console.error(e);
+      showMessage("画像の削除に失敗しました");
+      throw e;
+    }
+  };
+
+  // ✅ 部位を削除（画像も一緒に削除）
+  const deletePart = async (partId: string) => {
+    const part = parts.find((p) => p.id === partId);
+    if (!part) return;
+
+    try {
+      // 画像も消す
+      if (part.imagePath) {
+        await deleteObject(storageRef(storage, part.imagePath));
+      }
+
+      // Firestore doc を消す
+      await deleteDoc(doc(db, "parts", partId));
+
+      // 画面から消す
+      setParts((prev) => prev.filter((p) => p.id !== partId));
+
+      showMessage("削除しました");
+    } catch (e) {
+      console.error(e);
+      showMessage("削除に失敗しました");
+      throw e;
+    }
+  };
+
+  const addPart = async (input: NewPartInput) => {
+    const trimmedId = input.id.trim();
+    const trimmedName = input.name.trim();
+
+    if (!trimmedId || !trimmedName) {
+      showMessage("部位IDと部位名は必須です");
+      throw new Error("validation");
     }
 
-    const saved: Part = {
-      id: trimmedId,
-      name: trimmedName,
-      animal: input.animal,
-      description: input.description,
-      price: input.price,
-      stock: input.stock,
-      imageUrl,
-    };
+    if (parts.some((p) => p.id === trimmedId)) {
+      showMessage("同じIDの部位が既に存在します");
+      throw new Error("duplicate-id");
+    }
 
-    setParts((prev) => [...prev, saved]);
-    showMessage("保存しました");
-  } catch (e) {
-    console.error(e);
-    showMessage("新しい部位の追加に失敗しました");
-    throw e;
-  }
-};
+    try {
+      // ① 先に doc 作る
+      await setDoc(doc(db, "parts", trimmedId), {
+        name: trimmedName || null,
+        animal: input.animal || null,
+        description: input.description || null,
+        price: input.price ? Number(input.price) : null,
+        stock: input.stock ? Number(input.stock) : null,
+        imageUrl: null,
+        imagePath: null,
+      });
 
+      let imageUrl = "";
+      let imagePath: string | undefined = undefined;
+
+      // ② 画像があればアップロード
+      if (input.imageFile) {
+        const ext = input.imageFile.name.split(".").pop() || "jpg";
+        const fileName = `${crypto.randomUUID()}.${ext}`;
+        const safePartId = trimmedId.replace(/[^\w\-]/g, "_");
+        const objectPath = `parts/${safePartId}/${fileName}`;
+
+        const sref = storageRef(storage, objectPath);
+        const snapshot = await uploadBytes(sref, input.imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+        imagePath = objectPath;
+
+        await setDoc(
+          doc(db, "parts", trimmedId),
+          { imageUrl, imagePath },
+          { merge: true }
+        );
+      }
+
+      const saved: Part = {
+        id: trimmedId,
+        name: trimmedName,
+        animal: input.animal,
+        description: input.description,
+        price: input.price,
+        stock: input.stock,
+        imageUrl,
+        imagePath,
+      };
+
+      setParts((prev) => [...prev, saved]);
+      showMessage("保存しました");
+    } catch (e) {
+      console.error(e);
+      showMessage("新しい部位の追加に失敗しました");
+      throw e;
+    }
+  };
 
   return {
     parts,
@@ -229,8 +289,10 @@ const addPart = async (input: NewPartInput) => {
     message,
     updatePartField,
     savePart,
-    deletePart,
+    deletePart,       // ✅ idで削除（画像も）
+    deletePartImage,  // ✅ 画像だけ削除
     uploadPartImage,
     addPart,
+    reload: loadParts,
   };
 }

@@ -10,8 +10,25 @@ type Props = {
   onSave: (part: Part) => Promise<void>;
   onDelete: (part: Part) => Promise<void>;
   onUploadImage: (id: string, file: File) => Promise<string>;
-
 };
+
+import { deleteDoc, doc } from "firebase/firestore";
+import { deleteObject, ref } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
+
+async function onDelete(part: Part) {
+  // Storage を消す（あれば）
+  if (part.imagePath) {
+    await deleteObject(ref(storage, part.imagePath));
+  }
+
+  // Firestore ドキュメントを消す
+  await deleteDoc(doc(db, "parts", part.id));
+
+  // ローカル state から消す（これが “画面から消えない” を防ぐ）
+  setParts((prev) => prev.filter((p) => p.id !== part.id));
+}
+
 
 export default function PartEditor({
   part,
@@ -23,28 +40,21 @@ export default function PartEditor({
   const [uploading, setUploading] = useState(false);
 
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const input = e.currentTarget; 
+    const input = e.currentTarget;
     const file = input.files?.[0];
     if (!file) return;
 
     try {
       setUploading(true);
       await onUploadImage(part.id, file);
-    } catch {
-      // メッセージは useParts 側で出す想定
     } finally {
       setUploading(false);
-      // 同じファイル再選択できるようクリア
       input.value = "";
     }
   };
 
   const handleSaveClick = async () => {
-    try {
-      await onSave(part);
-    } catch {
-      // エラー表示は useParts 側
-    }
+    await onSave(part);
   };
 
   const handleDeleteClick = async () => {
@@ -53,11 +63,7 @@ export default function PartEditor({
     );
     if (!ok) return;
 
-    try {
-      await onDelete(part);
-    } catch {
-      // エラー表示は useParts 側
-    }
+    await onDelete(part); // ✅ ここだけ
   };
 
   return (
@@ -91,7 +97,6 @@ export default function PartEditor({
           <span className="text-xs text-gray-400">ID: {part.id}</span>
         </div>
 
-        {/* 画像プレビュー：URLがなくても枠は出す */}
         <div className="h-24 w-36 overflow-hidden rounded border border-gray-200 bg-gray-50">
           {part.imageUrl ? (
             <img
@@ -123,12 +128,7 @@ export default function PartEditor({
           画像ファイルをアップロード
           {uploading && <span className="ml-2 text-xs text-gray-500">アップロード中...</span>}
         </span>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          disabled={uploading}
-        />
+        <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
       </label>
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
@@ -159,7 +159,7 @@ export default function PartEditor({
             type="button"
             onClick={handleSaveClick}
             disabled={uploading}
-            className="rounded bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
+            className="rounded bg-blue-600 px-4 py-1.5 font-semibold text-white disabled:opacity-50"
           >
             保存
           </button>
@@ -168,7 +168,7 @@ export default function PartEditor({
             type="button"
             onClick={handleDeleteClick}
             disabled={uploading}
-            className="rounded bg-red-600 px-4 py-1.5 font-semibold text-white hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
+            className="rounded bg-red-600 px-4 py-1.5 font-semibold text-white disabled:opacity-50"
           >
             削除
           </button>
