@@ -96,7 +96,7 @@ export default function TrapMapPage() {
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">罠マップ</h1>
+        <h1 className="text-2xl font-bold">わなマップ</h1>
 
       </header>
 
