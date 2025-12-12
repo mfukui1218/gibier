@@ -132,12 +132,29 @@ export default function HomeHubPage() {
               <h2 style={{ fontSize: 20, marginBottom: 6 }}>マイページ</h2>
               <p style={{ fontSize: 14, opacity: 0.75 }}>ユーザー情報を確認</p>
             </div>
+			<div
+				style={cardStyle}
+				onMouseOver={(e) => {
+				  e.currentTarget.style.background = "rgba(255,255,255,0.3)";
+				  e.currentTarget.style.transform = "translateY(-3px)";
+				}}
+				onMouseOut={(e) => {
+				  e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+				  e.currentTarget.style.transform = "translateY(0)";
+				}}
+				onClick={() => router.push("/contacts")}
+				>
+				<h2 style={{ fontSize: 20, marginBottom: 6 }}>お問い合わせ</h2>
+				<p style={{ fontSize: 14, opacity: 0.75 }}>
+				  お問い合わせフォームへ
+				</p>
+			</div>
 
             <div
               style={{
-                ...cardStyle,
-                borderColor: "rgba(255,150,150,0.7)",
-              }}
+				  ...cardStyle,
+				  borderColor: "rgba(255,150,150,0.7)",
+				}}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = "rgba(255,120,120,0.3)";
                 e.currentTarget.style.transform = "translateY(-3px)";
@@ -150,10 +167,45 @@ export default function HomeHubPage() {
             >
               <h2 style={{ fontSize: 20, marginBottom: 6 }}>ログアウト</h2>
               <p style={{ fontSize: 14, opacity: 0.75 }}>サインアウトする</p>
-            </div>
+        </div>
+		<div
+		  style={{
+		    display: "grid",
+		    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+		    gap: 14,
+		    width: "1%",
+		  }}
+		>
+		  <div
+		    style={{
+		      padding: "1px 2px",
+		      background: "rgba(255,255,255,0.12)",
+		      borderRadius: 10,
+		      cursor: "pointer",
+		      transition: "all 0.2s",
+		      boxShadow: "0 3px 6px rgba(0,0,0,0.15)",
+		      textAlign: "center",
+		    }}
+		    onMouseOver={(e) => {
+		      e.currentTarget.style.background = "rgba(255,255,255,0.22)";
+		      e.currentTarget.style.transform = "translateY(-2px)";
+		    }}
+		    onMouseOut={(e) => {
+		      e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+		      e.currentTarget.style.transform = "translateY(0)";
+		    }}
+		    onClick={() => router.push("/admin")}
+		  >
+		    <h2 style={{ fontSize: 10, marginBottom: 4 }}>管理者用</h2>
+		  </div>
+		</div>
+		
           </>
         )}
       </div>
     </main>
   );
 }
+
+
+

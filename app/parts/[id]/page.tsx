@@ -1,56 +1,53 @@
 // app/parts/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { MEAT_PARTS } from "@/lib/meatParts";
+import styles from "./page.module.css";
 
-// 共通ボタン風スタイル（他ページに合わせる）
-const buttonStyle: CSSProperties = {
-  padding: "10px 18px",
-  background: "rgba(255,255,255,0.15)",
-  border: "1px solid rgba(255,255,255,0.6)",
-  color: "#fff",
-  borderRadius: 8,
-  fontSize: 15,
-  fontWeight: 600,
-  cursor: "pointer",
-  backdropFilter: "blur(6px)",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-  transition: "all 0.25s",
+type PartDoc = {
+  name?: string;
+  animal?: string;
+  description?: string;
+  imageUrl?: string; // ← Firestore 側は imageUrl に統一推奨
+  price?: string | number; // "1800" / 1800 / "1,800" など色々来てもOKにする
+  stock?: number; // g の想定（運用に合わせて単位は変えてOK）
 };
+
+function formatPrice(price: PartDoc["price"]) {
+  if (price === undefined || price === null || price === "") return "";
+  if (typeof price === "number") return price.toLocaleString();
+  // 文字列の "1,800円" みたいなのも来る可能性があるので、できるだけ崩さない
+  return String(price).replace(/円\s*\/\s*100g$/g, "").trim();
+}
 
 export default function PartPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
 
-  // useParams の戻り値から id を取り出し（string | string[] の可能性に対応）
   const rawId = params?.id;
-  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const id = useMemo(() => (Array.isArray(rawId) ? rawId[0] : rawId), [rawId]);
 
-  const base = MEAT_PARTS.find((p) => p.id === id);
-
-  const [price, setPrice] = useState<string>("");
-  const [stock, setStock] = useState<number | null>(null);
+  const [part, setPart] = useState<(PartDoc & { id: string }) | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Firestore から値段・在庫を読む
   useEffect(() => {
     if (!id) return;
 
     const load = async () => {
+      setLoading(true);
       try {
-        const ref = doc(db, "parts", id);
-        const snap = await getDoc(ref);
+        const snap = await getDoc(doc(db, "parts", id));
         if (snap.exists()) {
-          const data = snap.data() as any;
-          if (data.price) setPrice(data.price);
-          if (typeof data.stock === "number") setStock(data.stock);
+          setPart({ id: snap.id, ...(snap.data() as PartDoc) });
+        } else {
+          setPart(null);
         }
       } catch (e) {
         console.error(e);
+        setPart(null);
       } finally {
         setLoading(false);
       }
@@ -62,57 +59,29 @@ export default function PartPage() {
   // id がまだ取れてない
   if (!id) {
     return (
-      <main style={{ padding: 24, color: "#fff" }}>
-        読み込み中...
+      <main className={styles.main}>
+        <div className={styles.loading}>読み込み中...</div>
       </main>
     );
   }
 
-  // 該当する部位が MEAT_PARTS にない
-  if (!base) {
+  // ロード中
+  if (loading) {
     return (
-      <main
-        style={{
-          padding: 24,
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 600,
-            background: "rgba(0,0,0,0.4)",
-            borderRadius: 16,
-            padding: 24,
-            border: "1px solid rgba(255,255,255,0.2)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-            backdropFilter: "blur(10px)",
-            color: "#fff",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 24,
-              marginBottom: 12,
-              textAlign: "center",
-            }}
-          >
-            部位詳細
-          </h1>
-          <p style={{ marginBottom: 16 }}>この部位は登録されていません。</p>
-          <button
-            onClick={() => router.push("/gibier")}
-            style={buttonStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
+      <main className={styles.main}>
+        <div className={styles.loading}>読み込み中...</div>
+      </main>
+    );
+  }
+
+  // Firestore に存在しない
+  if (!part) {
+    return (
+      <main className={styles.main}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>部位詳細</h1>
+          <p className={styles.text}>この部位は登録されていません。</p>
+          <button onClick={() => router.push("/gibier")} className={styles.button}>
             ホームに戻る
           </button>
         </div>
@@ -120,109 +89,58 @@ export default function PartPage() {
     );
   }
 
+  const name = part.name ?? "名称未登録";
+  const animal = part.animal ?? "";
+  const desc = part.description ?? "説明未登録";
+  const img = part.imageUrl || "/images/placeholder.png";
+
+  const priceText = formatPrice(part.price);
+  const stockText =
+    typeof part.stock === "number" ? `${part.stock} g` : "";
+
   return (
-    <main
-      style={{
-        padding: 24,
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 700,
-          background: "rgba(0,0,0,0.4)",
-          borderRadius: 16,
-          padding: 24,
-          border: "1px solid rgba(255,255,255,0.2)",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-          backdropFilter: "blur(10px)",
-          color: "#fff",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            marginBottom: 12,
-          }}
-        >
-          {base.name}（{base.animal}）
+    <main className={styles.main}>
+      <div className={styles.card}>
+        <h2 className={styles.partTitle}>
+          {name}
+          {animal ? `（${animal}）` : ""}
         </h2>
 
-        <div
-          style={{
-            marginTop: 8,
-            marginBottom: 20,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
+        <div className={styles.imageWrapper}>
           <img
-            src={base.imageSrc}
-            alt={base.name}
+            src={img}
+            alt={`${animal} ${name}`.trim()}
+            className={styles.image}
             style={{
-              width: 360,
-              height: 260,
+              width: "100%",
+              height: "100%",
               objectFit: "cover",
-              borderRadius: 12,
-              boxShadow: "0 8px 20px rgba(0,0,0,0.7)",
-              border: "1px solid rgba(255,255,255,0.3)",
+              display: "block",
             }}
           />
         </div>
 
-        <p
-          style={{
-            fontSize: 15,
-            lineHeight: 1.7,
-            marginBottom: 20,
-          }}
-        >
-          {base.description}
-        </p>
+        <p className={styles.description}>{desc}</p>
 
-        <div
-          style={{
-            marginTop: 8,
-            padding: 16,
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.2)",
-            background: "rgba(0,0,0,0.45)",
-          }}
-        >
-          {loading ? (
-            <p>在庫情報読み込み中...</p>
-          ) : (
-            <>
-              <p style={{ marginBottom: 8 }}>
-                <strong>値段の相場：</strong>
-                {price ? `${price}円 / 100g` : "未登録"}
-              </p>
-              <p style={{ marginBottom: 16 }}>
-                <strong>在庫：</strong>
-                {stock !== null ? `${stock} g` : "未登録"}
-              </p>
+        <div className={styles.infoBox}>
+          <p className={styles.text}>
+            <strong>値段：</strong>
+            {priceText ? `${priceText}円 / 100g` : "未登録"}
+          </p>
 
-              <div style={{ marginTop: 4, textAlign: "right" }}>
-                <button
-                  onClick={() => router.push(`/request?partId=${base.id}`)}
-                  style={buttonStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  この部位が欲しい
-                </button>
-              </div>
-            </>
-          )}
+          <p className={styles.text}>
+            <strong>在庫：</strong>
+            {stockText || "未登録"}
+          </p>
+
+          <div className={styles.actionRow}>
+            <button
+              onClick={() => router.push(`/request?partId=${part.id}`)}
+              className={styles.button}
+            >
+              この部位が欲しい
+            </button>
+          </div>
         </div>
       </div>
     </main>

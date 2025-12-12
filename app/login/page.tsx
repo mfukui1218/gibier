@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   OAuthProvider,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 import { auth, app } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
@@ -70,6 +71,15 @@ export default function LoginPage() {
 
     const user = result.user;
     const email = user.email?.toLowerCase() ?? "";
+    const info = getAdditionalUserInfo(result);
+
+    // 初回ログインのときだけ users を作成
+    if (info?.isNewUser) {
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email ?? null,
+        createdAt: serverTimestamp(),
+      });
+    }
 
     if (!email) {
       await user.delete();
@@ -124,6 +134,15 @@ async function handleAppleLogin() {
     const email = user.email?.toLowerCase() ?? "";
 
     // Apple は 2回目以降 email を返さない → この場合も弾く
+    const info = getAdditionalUserInfo(result);
+
+    // 初回ログインのときだけ users を作成
+    if (info?.isNewUser) {
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email ?? null,
+        createdAt: serverTimestamp(),
+      });
+    }
     if (!email) {
       await user.delete();
       setError("Apple からメールを取得できませんでした。");

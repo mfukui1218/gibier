@@ -229,7 +229,7 @@ export default function HomePage() {
                 >
                   <img
                     src={part.imageUrl || "/images/placeholder.png"}
-                    alt={`${part.animal ?? ""} ${part.name}`}
+                    alt={`${part.animal} ${part.name}`}
                     style={{
                       width: "100%",
                       height: "100%",

@@ -1,29 +1,36 @@
-// app/request/page.tsx
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { MEAT_PARTS } from "@/lib/meatParts";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDocs,
+} from "firebase/firestore";
 import styles from "./request.module.css";
+
+type Part = {
+  id: string;
+  name: string;
+  animal?: string;
+};
 
 function RequestPageInner() {
   const user = useAuthUser();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL から partId を読む（なければ先頭の部位）
-  const initialPartId = searchParams.get("partId") ?? MEAT_PARTS[0]?.id ?? "";
-
-  const [partId, setPartId] = useState(initialPartId);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [partId, setPartId] = useState("");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // 認証状態
+  /* ---------- 認証 ---------- */
   if (user === undefined) {
     return (
       <main className={styles.page}>
@@ -37,8 +44,27 @@ function RequestPageInner() {
     return null;
   }
 
-  const part = MEAT_PARTS.find((p) => p.id === partId);
+  /* ---------- 部位一覧ロード ---------- */
+  useEffect(() => {
+    const loadParts = async () => {
+      const snap = await getDocs(collection(db, "parts"));
+      const list: Part[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as any),
+      }));
+      setParts(list);
 
+      // URL に partId があれば初期選択
+      const initial = searchParams.get("partId");
+      if (initial) setPartId(initial);
+    };
+
+    loadParts();
+  }, [searchParams]);
+
+  const part = parts.find((p) => p.id === partId);
+
+  /* ---------- 送信 ---------- */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -77,16 +103,18 @@ function RequestPageInner() {
       setMessage("リクエストを送信しました！");
       setAmount("");
       setAddress("");
+      setPartId("");
 
-      window.setTimeout(() => setMessage(""), 4000);
-    } catch (e) {
-      console.error(e);
+      setTimeout(() => setMessage(""), 4000);
+    } catch (err) {
+      console.error(err);
       setMessage("送信に失敗しました");
     } finally {
       setSending(false);
     }
   }
 
+  /* ---------- UI ---------- */
   return (
     <main className={styles.page}>
       <div className={styles.card}>
@@ -102,7 +130,8 @@ function RequestPageInner() {
               onChange={(e) => setPartId(e.target.value)}
               className={styles.select}
             >
-              {MEAT_PARTS.map((p) => (
+              <option value="">選択してください</option>
+              {parts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.animal ? `${p.animal}：${p.name}` : p.name}
                 </option>
@@ -116,7 +145,6 @@ function RequestPageInner() {
             <div className={styles.amountWrapper}>
               <input
                 type="number"
-                placeholder="希望量"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className={styles.amountInput}
@@ -129,8 +157,6 @@ function RequestPageInner() {
           <label className={styles.field}>
             <span className={styles.label}>送り先</span>
             <textarea
-              placeholder={`郵便番号・都道府県・市区町村・番地など送ってほしい場所。
-LINEで住所教えてくれても可（"LINE" と送ればOK）`}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={4}

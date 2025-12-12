@@ -138,7 +138,7 @@ export default function HomePage() {
               }}
             >
               <ButtonLink href="/profile">プロフィール</ButtonLink>
-              <ButtonLink href="/gibier">Home</ButtonLink>
+              <ButtonLink href="/home">Home</ButtonLink>
             </div>
           </>
         )}
