@@ -126,6 +126,23 @@ export default function AdminTopPage() {
             </p>
           </div>
 
+          <div
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
+              e.currentTarget.style.transform = "translateY(-3px)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => router.push("/admin/harvestspost")}
+          >
+            <h2 style={{ fontSize: 18, marginBottom: 4 }}>収穫物・ニュース</h2>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>
+              収穫物・ニュースの確認・追加
+            </p>
+          </div>
           {/* リクエスト一覧 */}
           <div
             style={cardStyle}
