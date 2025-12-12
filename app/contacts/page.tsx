@@ -1,19 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useRouter } from "next/navigation";
 import styles from "./contact.module.css";
 
 export default function ContactPage() {
   const user = useAuthUser();
+  const router = useRouter();
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const [email, setEmail] = useState(""); // ← 初期値は空にする
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);
+
+  // ✅ ログインが確定したら email を同期
+  useEffect(() => {
+    if (user?.email) setEmail(user.email);
+  }, [user?.email]);
+
+  // ✅ 未ログインならログインへ
+  useEffect(() => {
+    if (user === null) router.replace("/login");
+  }, [user, router]);
+
+  if (user === undefined) {
+    return <main className={styles.container}>読み込み中...</main>;
+  }
+  if (user === null) {
+    return null; // useEffectで/loginへ飛ぶ
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,12 +44,13 @@ export default function ContactPage() {
     }
 
     setSending(true);
-
     try {
       await addDoc(collection(db, "contacts"), {
-        name: name || null,
-        email: email || null,
-        message,
+        userId: user.uid,                 // ✅ 誰が送ったか
+        userEmail: user.email ?? null,    // ✅ Authのemail
+        name: name.trim() || null,
+        email: email.trim() || null,      // 返信先として任意
+        message: message.trim(),
         createdAt: serverTimestamp(),
       });
 
@@ -81,23 +101,13 @@ export default function ContactPage() {
             />
           </label>
 
-          <button
-            type="submit"
-            className={styles.button}
-            disabled={sending}
-          >
+          <button type="submit" className={styles.button} disabled={sending}>
             {sending ? "送信中…" : "送信"}
           </button>
         </form>
 
         {status && (
-          <p
-            className={
-              status.includes("失敗")
-                ? styles.statusError
-                : styles.statusSuccess
-            }
-          >
+          <p className={status.includes("失敗") ? styles.statusError : styles.statusSuccess}>
             {status}
           </p>
         )}
