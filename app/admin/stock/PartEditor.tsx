@@ -12,24 +12,6 @@ type Props = {
   onUploadImage: (id: string, file: File) => Promise<string>;
 };
 
-import { deleteDoc, doc } from "firebase/firestore";
-import { deleteObject, ref } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-
-async function onDelete(part: Part) {
-  // Storage を消す（あれば）
-  if (part.imagePath) {
-    await deleteObject(ref(storage, part.imagePath));
-  }
-
-  // Firestore ドキュメントを消す
-  await deleteDoc(doc(db, "parts", part.id));
-
-  // ローカル state から消す（これが “画面から消えない” を防ぐ）
-  setParts((prev) => prev.filter((p) => p.id !== part.id));
-}
-
-
 export default function PartEditor({
   part,
   onFieldChange,
