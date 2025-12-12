@@ -162,6 +162,24 @@ export default function AdminTopPage() {
             </p>
           </div>
 
+          <div
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
+              e.currentTarget.style.transform = "translateY(-3px)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => router.push("/admin/mapEdit")}
+          >
+            <h2 style={{ fontSize: 18, marginBottom: 4 }}>わなマップ編集</h2>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>
+              罠マップを編集します
+            </p>
+          </div>
+
           {/* 問い合わせ一覧 */}
           <div
             style={cardStyle}

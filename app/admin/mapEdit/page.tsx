@@ -142,7 +142,7 @@ export default function AdminTrapMapEditPage() {
     <main className="mx-auto max-w-6xl p-6 space-y-5">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">罠マップ（管理編集）</h1>
-        <p className="text-sm text-gray-600">ログイン中：{user.email}</p>
+        <p className="text-sm text-gray-600"style ={{color: "#ffffff"}}>ログイン中：{user.email}</p>
       </header>
 
       <section className="rounded-xl border border-gray-200 overflow-hidden">
