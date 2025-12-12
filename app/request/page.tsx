@@ -30,22 +30,15 @@ function RequestPageInner() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  /* ---------- 認証 ---------- */
-  if (user === undefined) {
-    return (
-      <main className={styles.page}>
-        <div className={styles.loading}>読み込み中...</div>
-      </main>
-    );
-  }
-
-  if (user === null) {
-    router.replace("/login");
-    return null;
-  }
-
-  /* ---------- 部位一覧ロード ---------- */
+  // ✅ 未ログインなら /login に飛ばす（レンダー中に router.replace しない）
   useEffect(() => {
+    if (user === null) router.replace("/login");
+  }, [user, router]);
+
+  // ✅ 部位一覧ロード（user が確定してから。未ログイン中は走らせない）
+  useEffect(() => {
+    if (!user) return; // undefined / null の間は何もしない
+
     const loadParts = async () => {
       const snap = await getDocs(collection(db, "parts"));
       const list: Part[] = snap.docs.map((d) => ({
@@ -60,27 +53,30 @@ function RequestPageInner() {
     };
 
     loadParts();
-  }, [searchParams]);
+  }, [user, searchParams]);
 
   const part = parts.find((p) => p.id === partId);
 
-  /* ---------- 送信 ---------- */
+  // ✅ ここから下で return 分岐してOK（hooksはもう全部呼ばれてる）
+  if (user === undefined) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.loading}>読み込み中...</div>
+      </main>
+    );
+  }
+
+  if (user === null) {
+    return null; // useEffect が /login に飛ばす
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
 
-    if (!partId) {
-      setMessage("部位を選択してください");
-      return;
-    }
-    if (!amount) {
-      setMessage("希望量（g）を入力してください");
-      return;
-    }
-    if (!address.trim()) {
-      setMessage("送り先を入力してください");
-      return;
-    }
+    if (!partId) return setMessage("部位を選択してください");
+    if (!amount) return setMessage("希望量（g）を入力してください");
+    if (!address.trim()) return setMessage("送り先を入力してください");
 
     const ok = window.confirm(
       `${part?.name ?? partId} を ${amount}g、以下の住所に希望として送信します。\n\n${address}\n\nよろしいですか？`
@@ -88,7 +84,6 @@ function RequestPageInner() {
     if (!ok) return;
 
     setSending(true);
-
     try {
       await addDoc(collection(db, "requests"), {
         userId: user.uid,
@@ -104,7 +99,6 @@ function RequestPageInner() {
       setAmount("");
       setAddress("");
       setPartId("");
-
       setTimeout(() => setMessage(""), 4000);
     } catch (err) {
       console.error(err);
@@ -114,7 +108,6 @@ function RequestPageInner() {
     }
   }
 
-  /* ---------- UI ---------- */
   return (
     <main className={styles.page}>
       <div className={styles.card}>
@@ -122,7 +115,6 @@ function RequestPageInner() {
         <p className={styles.subtitle}>ログイン中：{user.email}</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          {/* 部位選択 */}
           <label className={styles.field}>
             <span className={styles.label}>希望する部位</span>
             <select
@@ -139,11 +131,11 @@ function RequestPageInner() {
             </select>
           </label>
 
-          {/* 希望量 */}
           <label className={styles.field}>
             <span className={styles.label}>希望量</span>
             <div className={styles.amountWrapper}>
               <input
+                placeholder="希望量"
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -153,10 +145,10 @@ function RequestPageInner() {
             </div>
           </label>
 
-          {/* 送り先 */}
           <label className={styles.field}>
             <span className={styles.label}>送り先</span>
             <textarea
+              placeholder="送り先の住所を入力してください　　　　　　　LINEでも可（”LINE”と入力してください）"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={4}
@@ -164,23 +156,13 @@ function RequestPageInner() {
             />
           </label>
 
-          <button
-            type="submit"
-            disabled={sending}
-            className={styles.button}
-          >
+          <button type="submit" disabled={sending} className={styles.button}>
             {sending ? "送信中..." : "リクエストを送信"}
           </button>
         </form>
 
         {message && (
-          <p
-            className={
-              message.includes("失敗")
-                ? styles.messageError
-                : styles.messageOk
-            }
-          >
+          <p className={message.includes("失敗") ? styles.messageError : styles.messageOk}>
             {message}
           </p>
         )}

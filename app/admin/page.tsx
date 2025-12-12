@@ -137,7 +137,7 @@ export default function AdminTopPage() {
               e.currentTarget.style.background = "rgba(0,0,0,0.35)";
               e.currentTarget.style.transform = "translateY(0)";
             }}
-            onClick={() => router.push("/admin/requests")}
+            onClick={() => router.push("/admin/requestlist")}
           >
             <h2 style={{ fontSize: 18, marginBottom: 4 }}>リクエスト一覧</h2>
             <p style={{ fontSize: 13, opacity: 0.8 }}>
