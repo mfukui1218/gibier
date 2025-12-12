@@ -1,5 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
+// app/layout.tsx
+import "leaflet/dist/leaflet.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

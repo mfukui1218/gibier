@@ -180,6 +180,23 @@ export default function AdminTopPage() {
               /contact から送られた問い合わせ内容を確認
             </p>
           </div>
+          <div
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
+              e.currentTarget.style.transform = "translateY(-3px)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => router.push("/home")}
+          >
+            <h2 style={{ fontSize: 18, marginBottom: 4 }}>HOME</h2>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>
+              HOMEに戻る
+            </p>
+          </div>
         </div>
       </div>
     </main>
