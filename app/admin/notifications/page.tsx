@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { auth } from "@/lib/firebase";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   collection,
   deleteDoc,
@@ -16,7 +15,6 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-
 
 const ADMIN_EMAIL = "ttnetnzua@gmail.com";
 
@@ -42,17 +40,32 @@ function formatTime(ts: any) {
 export default function AdminNotificationsPage() {
   const user = useAuthUser();
   const router = useRouter();
-  const isAdmin = (user?.email ?? "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  const isAdmin =
+    (user?.email ?? "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const [items, setItems] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 認証リダイレクトは useEffect で
+  // ✅ ログは useEffect（レンダー毎に出さない）
+  useEffect(() => {
+    console.log("[AdminNotifications] hook user =", user?.uid, user?.email);
+    console.log(
+      "[AdminNotifications] auth.currentUser =",
+      auth.currentUser?.uid,
+      auth.currentUser?.email
+    );
+  }, [user?.uid, user?.email]);
+
+  // ✅ 未ログインなら /login へ
   useEffect(() => {
     if (user === null) router.replace("/login");
   }, [user, router]);
 
   async function load() {
+    // ✅ 保険：admin以外は絶対にFirestore触らない
+    if (!isAdmin) return;
+
     setLoading(true);
     try {
       const q = query(
@@ -61,25 +74,25 @@ export default function AdminNotificationsPage() {
         limit(200)
       );
       const snap = await getDocs(q);
+
       const list: AdminNotification[] = snap.docs.map((d) => ({
         id: d.id,
         ...(d.data() as any),
       }));
       setItems(list);
     } catch (e) {
-      console.error(e);
+      console.error("[AdminNotifications] load error:", e);
       setItems([]);
     } finally {
       setLoading(false);
     }
   }
 
-  console.log("hook user =", user?.uid, user?.email);
-  console.log("auth.currentUser =", auth.currentUser?.uid, auth.currentUser?.email);
-
+  // ✅ adminになった瞬間だけ読み込み
   useEffect(() => {
     if (!isAdmin) return;
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const unreadCount = useMemo(
@@ -94,7 +107,9 @@ export default function AdminNotificationsPage() {
         read: true,
         readAt: serverTimestamp(),
       });
-      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, read: true } : x)));
+      setItems((prev) =>
+        prev.map((x) => (x.id === id ? { ...x, read: true } : x))
+      );
     } catch (e) {
       console.error(e);
       alert("既読に失敗しました");
@@ -187,9 +202,11 @@ export default function AdminNotificationsPage() {
             return (
               <li
                 key={n.id}
-				className={`rounded-xl border p-4 ${
-				  isUnread ? "border-black/20 bg-transparent" : "border-gray-200 bg-transparent"
-				}`}
+                className={`rounded-xl border p-4 ${
+                  isUnread
+                    ? "border-black/20 bg-transparent"
+                    : "border-gray-200 bg-transparent"
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -200,9 +217,7 @@ export default function AdminNotificationsPage() {
                       <div className="font-semibold truncate">
                         {n.title ?? "(no title)"}
                       </div>
-                      <div className="text-xs text-white">
-                        {n.type ?? "unknown"}
-                      </div>
+                      <div className="text-xs text-white">{n.type ?? "unknown"}</div>
                     </div>
 
                     {n.body ? (
