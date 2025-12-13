@@ -3,18 +3,14 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthUser } from "@/hooks/useAuthUser";
 import type { CSSProperties } from "react";
-import { saveAdminFcmToken } from "@/lib/saveAdminFcmToken";
+
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { app } from "@/lib/firebase";
+import { saveAdminFcmToken, ADMIN_EMAIL } from "@/lib/saveAdminFcmToken";
 
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { app } from "@/lib/firebase";
 
-// ★ できれば env に寄せる（Vercelにも入れる）
-// const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "ttnetnzua@gmail.com";
-const ADMIN_EMAIL = "ttnetnzua@gmail.com";
-
-// 共通カードスタイル
 const cardStyle: CSSProperties = {
   padding: 16,
   borderRadius: 12,
@@ -27,7 +23,6 @@ const cardStyle: CSSProperties = {
   backdropFilter: "blur(8px)",
 };
 
-// ページ全体
 const mainStyle: CSSProperties = {
   padding: 24,
   display: "flex",
@@ -49,37 +44,45 @@ export default function AdminTopPage() {
   const user = useAuthUser();
   const router = useRouter();
 
-  // ★ 何度も permission / getToken しないため
+  // 何度も permission/getToken しない
   const didInitNotif = useRef(false);
 
-  // ★ 管理者だけ通知トークン取得
+  const isAdmin =
+    (user?.email ?? "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  // 管理者だけ通知トークン取得＆保存
   useEffect(() => {
     const run = async () => {
       if (didInitNotif.current) return;
       if (!user) return;
-      if (user.email !== ADMIN_EMAIL) return;
+      if (!isAdmin) return;
 
-      // SWが無い環境は不可
-      if (!("serviceWorker" in navigator)) return;
+      if (!("serviceWorker" in navigator)) {
+        console.log("No serviceWorker env");
+        return;
+      }
 
-      // VAPID KEY 必須
       const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
       if (!vapidKey) {
         console.error("Missing env: NEXT_PUBLIC_FCM_VAPID_KEY");
         return;
       }
 
-      // 通知許可（ユーザーが拒否したら終了）
+      // 通知許可
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         console.log("Notification permission:", permission);
         return;
       }
 
+      // ✅ ここで一回止める（保存失敗で無限リトライしない）
+      didInitNotif.current = true;
+
       const messaging = getMessaging(app);
 
-      // トークン取得（SW登録済み前提）
+      // SW 登録済み前提
       const swReg = await navigator.serviceWorker.ready;
+
       const token = await getToken(messaging, {
         vapidKey,
         serviceWorkerRegistration: swReg,
@@ -90,23 +93,24 @@ export default function AdminTopPage() {
         return;
       }
 
-      didInitNotif.current = true;
       console.log("ADMIN FCM token:", token);
-      await saveAdminFcmToken(user.uid, token);
 
-      // TODO: ここで Firestore 等に保存（次のステップ）
-      // await saveAdminFcmToken(user.uid, token);
+      // Firestore に保存（adminのみ許可される）
+      await saveAdminFcmToken({
+        uid: user.uid,
+        email: user.email ?? "",
+        token,
+      });
 
-      // （任意）フォアグラウンド受信ログ
+      // フォアグラウンド受信（開いてる時にバナー出したいなら必要）
       onMessage(messaging, (payload) => {
         console.log("Foreground message:", payload);
-            
-        // フォアグラウンドでも通知を出す（iOS Safari/PWAで重要）
+
         if (Notification.permission !== "granted") return;
-            
+
         const title = payload.notification?.title ?? "通知";
         const body = payload.notification?.body ?? "";
-            
+
         new Notification(title, {
           body,
           icon: "/icons/icon-192.png",
@@ -116,7 +120,7 @@ export default function AdminTopPage() {
     };
 
     run().catch((e) => console.error("Notif init failed:", e));
-  }, [user]);
+  }, [user, isAdmin]);
 
   // 認証状態読み込み中
   if (user === undefined) {
@@ -130,7 +134,7 @@ export default function AdminTopPage() {
   }
 
   // 管理者チェック
-  if (user.email !== ADMIN_EMAIL) {
+  if (!isAdmin) {
     return (
       <main style={{ padding: 24 }}>
         <h1>アクセス拒否</h1>
@@ -143,20 +147,12 @@ export default function AdminTopPage() {
     <main style={mainStyle}>
       <div style={innerStyle}>
         <header style={{ marginBottom: 20 }}>
-          <h1
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
-              marginBottom: 4,
-            }}
-          >
+          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
             管理メニュー
           </h1>
-          <p style={{ fontSize: 13, color: "#ddd" }}>
-            ログイン中：{user.email}
-          </p>
+          <p style={{ fontSize: 13, color: "#ddd" }}>ログイン中：{user.email}</p>
           <p style={{ fontSize: 12, color: "#bbb", marginTop: 6 }}>
-            ※ 通知を許可すると管理者通知を受け取れます（許可ダイアログが出ます）
+            ※ 通知を許可すると管理者通知を受け取れます
           </p>
         </header>
 
@@ -167,7 +163,6 @@ export default function AdminTopPage() {
             gap: 16,
           }}
         >
-          {/* 在庫管理 */}
           <div
             style={cardStyle}
             onMouseOver={(e) => {
@@ -181,12 +176,9 @@ export default function AdminTopPage() {
             onClick={() => router.push("/admin/stock")}
           >
             <h2 style={{ fontSize: 18, marginBottom: 4 }}>在庫管理</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              各部位の価格と在庫量を編集
-            </p>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>各部位の価格と在庫量を編集</p>
           </div>
 
-          {/* 許可メール */}
           <div
             style={cardStyle}
             onMouseOver={(e) => {
@@ -223,7 +215,6 @@ export default function AdminTopPage() {
             </p>
           </div>
 
-          {/* リクエスト一覧 */}
           <div
             style={cardStyle}
             onMouseOver={(e) => {
@@ -255,12 +246,9 @@ export default function AdminTopPage() {
             onClick={() => router.push("/admin/mapEdit")}
           >
             <h2 style={{ fontSize: 18, marginBottom: 4 }}>わなマップ編集</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              罠マップを編集します
-            </p>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>罠マップを編集します</p>
           </div>
 
-          {/* 問い合わせ一覧 */}
           <div
             style={cardStyle}
             onMouseOver={(e) => {
@@ -292,9 +280,7 @@ export default function AdminTopPage() {
             onClick={() => router.push("/home")}
           >
             <h2 style={{ fontSize: 18, marginBottom: 4 }}>HOME</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              HOMEに戻る
-            </p>
+            <p style={{ fontSize: 13, opacity: 0.8 }}>HOMEに戻る</p>
           </div>
         </div>
       </div>

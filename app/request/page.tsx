@@ -4,12 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  getDocs,
-} from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import styles from "./request.module.css";
 
 type Part = {
@@ -30,14 +25,12 @@ function RequestPageInner() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // ✅ 未ログインなら /login に飛ばす（レンダー中に router.replace しない）
   useEffect(() => {
     if (user === null) router.replace("/login");
   }, [user, router]);
 
-  // ✅ 部位一覧ロード（user が確定してから。未ログイン中は走らせない）
   useEffect(() => {
-    if (!user) return; // undefined / null の間は何もしない
+    if (!user) return;
 
     const loadParts = async () => {
       const snap = await getDocs(collection(db, "parts"));
@@ -47,17 +40,15 @@ function RequestPageInner() {
       }));
       setParts(list);
 
-      // URL に partId があれば初期選択
       const initial = searchParams.get("partId");
       if (initial) setPartId(initial);
     };
 
-    loadParts();
+    loadParts().catch(console.error);
   }, [user, searchParams]);
 
   const part = parts.find((p) => p.id === partId);
 
-  // ✅ ここから下で return 分岐してOK（hooksはもう全部呼ばれてる）
   if (user === undefined) {
     return (
       <main className={styles.page}>
@@ -65,10 +56,7 @@ function RequestPageInner() {
       </main>
     );
   }
-
-  if (user === null) {
-    return null; // useEffect が /login に飛ばす
-  }
+  if (user === null) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +73,7 @@ function RequestPageInner() {
 
     setSending(true);
     try {
+      // ✅ ユーザーは requests にだけ書く
       await addDoc(collection(db, "requests"), {
         userId: user.uid,
         userEmail: user.email ?? null,
@@ -94,13 +83,9 @@ function RequestPageInner() {
         createdAt: serverTimestamp(),
         status: "pending",
       });
-      await addDoc(collection(db, "adminNotifications"), {
-        type: "request",
-        title: "新しいリクエスト",
-        body: `${user.email ?? user.uid} / ${partId} / ${amount}g`,
-        read: false,
-        createdAt: serverTimestamp(),
-      });
+
+      // ❌ adminNotifications はクライアントから触らない（Functionsが作る）
+      // await addDoc(collection(db, "adminNotifications"), ...);
 
       setMessage("リクエストを送信しました！");
       setAmount("");
@@ -155,7 +140,7 @@ function RequestPageInner() {
           <label className={styles.field}>
             <span className={styles.label}>送り先</span>
             <textarea
-              placeholder="送り先の住所を入力してください　　　　　　　LINEでも可（”LINE”と入力してください）"
+              placeholder='送り先の住所を入力してください　　　　　　　LINEでも可（”LINE”と入力してください）'
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={4}
