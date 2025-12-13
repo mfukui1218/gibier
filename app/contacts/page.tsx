@@ -54,6 +54,14 @@ export default function ContactPage() {
         createdAt: serverTimestamp(),
       });
 
+      await addDoc(collection(db, "adminNotifications"), {
+        type: "contact",
+        title: "お問い合わせ",
+        body: `${email || "未入力"}: ${message.slice(0, 80)}`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+
       setStatus("送信しました！");
       setMessage("");
     } catch (err) {

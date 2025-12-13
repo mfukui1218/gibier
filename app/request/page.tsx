@@ -94,6 +94,13 @@ function RequestPageInner() {
         createdAt: serverTimestamp(),
         status: "pending",
       });
+      await addDoc(collection(db, "adminNotifications"), {
+        type: "request",
+        title: "新しいリクエスト",
+        body: `${user.email ?? user.uid} / ${partId} / ${amount}g`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
 
       setMessage("リクエストを送信しました！");
       setAmount("");
