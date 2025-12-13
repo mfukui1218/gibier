@@ -73,8 +73,9 @@ export default function AdminNotificationsPage() {
   }
 
   useEffect(() => {
+    if (!isAdmin) return;
     load();
-  }, []);
+  }, [isAdmin]);
 
   const unreadCount = useMemo(
     () => items.filter((x) => x.read !== true).length,
