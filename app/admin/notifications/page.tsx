@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -15,6 +16,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
+
 
 const ADMIN_EMAIL = "ttnetnzua@gmail.com";
 
@@ -71,6 +73,9 @@ export default function AdminNotificationsPage() {
       setLoading(false);
     }
   }
+
+  console.log("hook user =", user?.uid, user?.email);
+  console.log("auth.currentUser =", auth.currentUser?.uid, auth.currentUser?.email);
 
   useEffect(() => {
     if (!isAdmin) return;
