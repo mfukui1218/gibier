@@ -1,7 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
-// app/layout.tsx
 import "leaflet/dist/leaflet.css";
+import RegisterServiceWorker from "./_components/RegisterServiceWorker"; // ★追加
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontFamily: "system-ui, sans-serif",
         }}
       >
+        {/* ★ Service Worker 登録（ここで1回だけ） */}
+        <RegisterServiceWorker />
+
         {/* 背景画像 */}
         <div
           style={{
@@ -28,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
 
-        {/* 暗めのフィルター（写真を見やすくする） */}
+        {/* 暗めのフィルター */}
         <div
           style={{
             position: "fixed",

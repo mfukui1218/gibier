@@ -1,10 +1,17 @@
 // app/admin/page.tsx
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import type { CSSProperties } from "react";
+import { saveAdminFcmToken } from "@/lib/saveAdminFcmToken";
 
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { app } from "@/lib/firebase";
+
+// ★ できれば env に寄せる（Vercelにも入れる）
+// const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "ttnetnzua@gmail.com";
 const ADMIN_EMAIL = "ttnetnzua@gmail.com";
 
 // 共通カードスタイル
@@ -42,6 +49,63 @@ export default function AdminTopPage() {
   const user = useAuthUser();
   const router = useRouter();
 
+  // ★ 何度も permission / getToken しないため
+  const didInitNotif = useRef(false);
+
+  // ★ 管理者だけ通知トークン取得
+  useEffect(() => {
+    const run = async () => {
+      if (didInitNotif.current) return;
+      if (!user) return;
+      if (user.email !== ADMIN_EMAIL) return;
+
+      // SWが無い環境は不可
+      if (!("serviceWorker" in navigator)) return;
+
+      // VAPID KEY 必須
+      const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
+      if (!vapidKey) {
+        console.error("Missing env: NEXT_PUBLIC_FCM_VAPID_KEY");
+        return;
+      }
+
+      // 通知許可（ユーザーが拒否したら終了）
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.log("Notification permission:", permission);
+        return;
+      }
+
+      const messaging = getMessaging(app);
+
+      // トークン取得（SW登録済み前提）
+      const swReg = await navigator.serviceWorker.ready;
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: swReg,
+      });
+
+      if (!token) {
+        console.error("No FCM token available");
+        return;
+      }
+
+      didInitNotif.current = true;
+      console.log("ADMIN FCM token:", token);
+      await saveAdminFcmToken(user.uid, token);
+
+      // TODO: ここで Firestore 等に保存（次のステップ）
+      // await saveAdminFcmToken(user.uid, token);
+
+      // （任意）フォアグラウンド受信ログ
+      onMessage(messaging, (payload) => {
+        console.log("Foreground message:", payload);
+      });
+    };
+
+    run().catch((e) => console.error("Notif init failed:", e));
+  }, [user]);
+
   // 認証状態読み込み中
   if (user === undefined) {
     return <main style={{ padding: 24 }}>読み込み中...</main>;
@@ -78,6 +142,9 @@ export default function AdminTopPage() {
           </h1>
           <p style={{ fontSize: 13, color: "#ddd" }}>
             ログイン中：{user.email}
+          </p>
+          <p style={{ fontSize: 12, color: "#bbb", marginTop: 6 }}>
+            ※ 通知を許可すると管理者通知を受け取れます（許可ダイアログが出ます）
           </p>
         </header>
 
@@ -143,6 +210,7 @@ export default function AdminTopPage() {
               収穫物・ニュースの確認・追加
             </p>
           </div>
+
           {/* リクエスト一覧 */}
           <div
             style={cardStyle}
@@ -198,6 +266,7 @@ export default function AdminTopPage() {
               /contact から送られた問い合わせ内容を確認
             </p>
           </div>
+
           <div
             style={cardStyle}
             onMouseOver={(e) => {

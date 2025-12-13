@@ -2,17 +2,16 @@
 
 // ⚠️ ここは “Firebase コンソールの Web app設定” の値を入れる
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyDuKxzhGOsNpu0SH4in0Auh8DoFkYEL23c",
+  authDomain: "management-gibier.firebaseapp.com",
+  projectId: "management-gibier",
+  storageBucket: "management-gibier.firebasestorage.app",
+  messagingSenderId: "848982630110",
+  appId: "1:848982630110:web:53833a5d0f813ee41fac4f",
 };
-
 // Firebase v9 compat を SW で使う（SW ではこの形が楽）
-importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js");
 
 firebase.initializeApp(firebaseConfig);
 

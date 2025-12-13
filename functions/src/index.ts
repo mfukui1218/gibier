@@ -1,8 +1,8 @@
-// functions/src/index.ts
 import * as admin from "firebase-admin";
-// functions/src/index.ts
+
 export { checkAllowedEmail, requestAllowEmail } from "./auth";
 export { onNotificationCreate } from "./notifications";
+export { notifyAdmins } from "./notifyAdmins"; // ★これを追加
 
 if (!admin.apps.length) {
   admin.initializeApp();
