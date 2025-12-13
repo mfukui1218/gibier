@@ -1,11 +1,13 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
-const db = admin.firestore();
-const messaging = admin.messaging();
-
 export const notifyAdmins = onRequest(async (req, res) => {
   try {
+    if (!admin.apps.length) admin.initializeApp();
+
+    const db = admin.firestore();
+    const messaging = admin.messaging();
+
     const { title, body, url } = req.body;
 
     if (!title || !body) {
