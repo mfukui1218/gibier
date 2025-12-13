@@ -100,6 +100,18 @@ export default function AdminTopPage() {
       // （任意）フォアグラウンド受信ログ
       onMessage(messaging, (payload) => {
         console.log("Foreground message:", payload);
+            
+        // フォアグラウンドでも通知を出す（iOS Safari/PWAで重要）
+        if (Notification.permission !== "granted") return;
+            
+        const title = payload.notification?.title ?? "通知";
+        const body = payload.notification?.body ?? "";
+            
+        new Notification(title, {
+          body,
+          icon: "/icons/icon-192.png",
+          data: payload.data ?? {},
+        });
       });
     };
 
