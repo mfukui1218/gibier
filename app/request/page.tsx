@@ -84,9 +84,6 @@ function RequestPageInner() {
         status: "pending",
       });
 
-      // ❌ adminNotifications はクライアントから触らない（Functionsが作る）
-      // await addDoc(collection(db, "adminNotifications"), ...);
-
       setMessage("リクエストを送信しました！");
       setAmount("");
       setAddress("");

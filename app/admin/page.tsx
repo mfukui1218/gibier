@@ -1,61 +1,51 @@
 // app/admin/page.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { CSSProperties } from "react";
 
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { app } from "@/lib/firebase";
-import { saveAdminFcmToken, ADMIN_EMAIL } from "@/lib/saveAdminFcmToken";
-
+import { saveAdminFcmToken} from "@/lib/saveAdminFcmToken";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
-const cardStyle: CSSProperties = {
-  padding: 16,
-  borderRadius: 12,
-  background: "rgba(0,0,0,0.35)",
-  border: "1px solid rgba(255,255,255,0.25)",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-  color: "#fff",
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-  backdropFilter: "blur(8px)",
-};
+import styles from "./admin.module.css";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
-const mainStyle: CSSProperties = {
-  padding: 24,
-  display: "flex",
-  justifyContent: "center",
-};
+type MenuItem = { title: string; desc: string; href: string };
 
-const innerStyle: CSSProperties = {
-  width: "100%",
-  maxWidth: 720,
-  background: "rgba(0,0,0,0.35)",
-  borderRadius: 16,
-  padding: 24,
-  border: "1px solid rgba(255,255,255,0.25)",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-  color: "#fff",
-};
+const ADMIN_MENU: MenuItem[] = [
+  { title: "在庫管理", desc: "各部位の価格と在庫量を編集", href: "/admin/stock" },
+  { title: "許可メール管理", desc: "登録を許可するメールアドレスの確認・追加", href: "/admin/allowed" },
+  { title: "収穫物・ニュース", desc: "収穫物・ニュースの確認・追加", href: "/admin/harvestspost" },
+  { title: "リクエスト一覧", desc: "希望 g・住所付きの「欲しいリクエスト」を確認", href: "/admin/requestlist" },
+  { title: "わなマップ編集", desc: "罠マップを編集します", href: "/admin/mapEdit" },
+  { title: "問い合わせ一覧", desc: "/contact から送られた問い合わせ内容を確認", href: "/admin/contacts" },
+  { title: "HOME", desc: "HOMEに戻る", href: "/home" },
+];
+
+function MenuCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
+  return (
+    <div className={styles.card} onClick={onClick}>
+      <h2 className={styles.cardTitle}>{item.title}</h2>
+      <p className={styles.cardDesc}>{item.desc}</p>
+    </div>
+  );
+}
 
 export default function AdminTopPage() {
   const user = useAuthUser();
   const router = useRouter();
-
-  // 何度も permission/getToken しない
   const didInitNotif = useRef(false);
 
-  const isAdmin =
-    (user?.email ?? "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = useMemo(() => {
+    return (user?.email ?? "").toLowerCase() === ADMIN_EMAIL;
+  }, [user]);
 
-  // 管理者だけ通知トークン取得＆保存
   useEffect(() => {
     const run = async () => {
       if (didInitNotif.current) return;
-      if (!user) return;
-      if (!isAdmin) return;
+      if (!user || !isAdmin) return;
 
       if (!("serviceWorker" in navigator)) {
         console.log("No serviceWorker env");
@@ -68,19 +58,16 @@ export default function AdminTopPage() {
         return;
       }
 
-      // 通知許可
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         console.log("Notification permission:", permission);
         return;
       }
 
-      // ✅ ここで一回止める（保存失敗で無限リトライしない）
+      // 保存失敗で無限リトライしない
       didInitNotif.current = true;
 
       const messaging = getMessaging(app);
-
-      // SW 登録済み前提
       const swReg = await navigator.serviceWorker.ready;
 
       const token = await getToken(messaging, {
@@ -93,24 +80,18 @@ export default function AdminTopPage() {
         return;
       }
 
-      console.log("ADMIN FCM token:", token);
-
-      // Firestore に保存（adminのみ許可される）
       await saveAdminFcmToken({
         uid: user.uid,
         email: user.email ?? "",
         token,
       });
 
-      // フォアグラウンド受信（開いてる時にバナー出したいなら必要）
       onMessage(messaging, (payload) => {
         console.log("Foreground message:", payload);
-
         if (Notification.permission !== "granted") return;
 
         const title = payload.notification?.title ?? "通知";
         const body = payload.notification?.body ?? "";
-
         new Notification(title, {
           body,
           icon: "/icons/icon-192.png",
@@ -122,18 +103,13 @@ export default function AdminTopPage() {
     run().catch((e) => console.error("Notif init failed:", e));
   }, [user, isAdmin]);
 
-  // 認証状態読み込み中
-  if (user === undefined) {
-    return <main style={{ padding: 24 }}>読み込み中...</main>;
-  }
+  if (user === undefined) return <main style={{ padding: 24 }}>読み込み中...</main>;
 
-  // 未ログインなら /login へ
   if (user === null) {
     router.replace("/login");
     return null;
   }
 
-  // 管理者チェック
   if (!isAdmin) {
     return (
       <main style={{ padding: 24 }}>
@@ -144,144 +120,18 @@ export default function AdminTopPage() {
   }
 
   return (
-    <main style={mainStyle}>
-      <div style={innerStyle}>
-        <header style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-            管理メニュー
-          </h1>
-          <p style={{ fontSize: 13, color: "#ddd" }}>ログイン中：{user.email}</p>
-          <p style={{ fontSize: 12, color: "#bbb", marginTop: 6 }}>
-            ※ 通知を許可すると管理者通知を受け取れます
-          </p>
+    <main className={styles.main}>
+      <div className={styles.inner}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>管理メニュー</h1>
+          <p className={styles.sub}>ログイン中：{user.email}</p>
+          <p className={styles.note}>※ 通知を許可すると管理者通知を受け取れます</p>
         </header>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/stock")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>在庫管理</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>各部位の価格と在庫量を編集</p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/allowed")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>許可メール管理</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              登録を許可するメールアドレスの確認・追加
-            </p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/harvestspost")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>収穫物・ニュース</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              収穫物・ニュースの確認・追加
-            </p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/requestlist")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>リクエスト一覧</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              希望 g・住所付きの「欲しいリクエスト」を確認
-            </p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/mapEdit")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>わなマップ編集</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>罠マップを編集します</p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/admin/contacts")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>問い合わせ一覧</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>
-              /contact から送られた問い合わせ内容を確認
-            </p>
-          </div>
-
-          <div
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.55)";
-              e.currentTarget.style.transform = "translateY(-3px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.35)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-            onClick={() => router.push("/home")}
-          >
-            <h2 style={{ fontSize: 18, marginBottom: 4 }}>HOME</h2>
-            <p style={{ fontSize: 13, opacity: 0.8 }}>HOMEに戻る</p>
-          </div>
+        <div className={styles.grid}>
+          {ADMIN_MENU.map((item) => (
+            <MenuCard key={item.href} item={item} onClick={() => router.push(item.href)} />
+          ))}
         </div>
       </div>
     </main>

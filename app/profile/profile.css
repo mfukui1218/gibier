@@ -1,0 +1,125 @@
+.profile-root {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.glass {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  color: #fff;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.profile-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.profile-sub {
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 18px;
+  color: #ddd;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-message {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.profile-message.ok {
+  color: #b4ffb4;
+}
+
+.profile-message.err {
+  color: #ff8080;
+}
+
+/* ===== UI: common ===== */
+
+.ui-glass {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  color: #fff;
+}
+
+.ui-input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.95);
+  color: #000;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  outline: none;
+}
+
+.ui-input:focus {
+  border-color: rgba(0,0,0,0.35);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.24);
+}
+
+.ui-select {
+  cursor: pointer;
+}
+
+.ui-button {
+  padding: 12px 20px;
+  width: 100%;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.6);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.ui-button:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+.ui-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+
+.ui-message-ok {
+  margin-top: 12px;
+  color: #b4ffb4;
+  text-align: center;
+}
+
+.ui-message-ng {
+  margin-top: 12px;
+  color: #ff8080;
+  text-align: center;
+}

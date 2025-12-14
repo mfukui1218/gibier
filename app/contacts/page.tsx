@@ -12,17 +12,15 @@ export default function ContactPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState(""); // ← 初期値は空にする
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);
 
-  // ✅ ログインが確定したら email を同期
   useEffect(() => {
     if (user?.email) setEmail(user.email);
   }, [user?.email]);
 
-  // ✅ 未ログインならログインへ
   useEffect(() => {
     if (user === null) router.replace("/login");
   }, [user, router]);
@@ -31,7 +29,7 @@ export default function ContactPage() {
     return <main className={styles.container}>読み込み中...</main>;
   }
   if (user === null) {
-    return null; // useEffectで/loginへ飛ぶ
+    return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {

@@ -1,31 +1,54 @@
-// app/mypage/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
-const cardBase =
-  "block rounded-xl border border-black/10 bg-white px-6 py-4 shadow hover:shadow-md hover:-translate-y-0.5 transition text-left";
+import "./mypage.css";
 
-const glassCard =
-  "block rounded-xl border border-white/40 bg-white/20 backdrop-blur-md px-6 py-4 shadow-md transition hover:bg-white/30 hover:-translate-y-0.5";
-
+type UserProfile = {
+  name?: string;
+  relationship?: string;
+};
 
 export default function MyPage() {
   const user = useAuthUser();
   const router = useRouter();
 
-  // 未ログインなら login へリダイレクト
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
   useEffect(() => {
     if (user === null) {
       router.replace("/login");
     }
   }, [user, router]);
+
+  // ✅ Firestore の users/{uid} を読んで name を取る
+  useEffect(() => {
+    if (!user) return; // undefined / null は待つ
+
+    const load = async () => {
+      setProfileLoading(true);
+      try {
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        setProfile(snap.exists() ? (snap.data() as any) : {});
+      } catch (e) {
+        console.error("profile load failed:", e);
+        setProfile({});
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    load();
+  }, [user]);
 
   if (user === undefined) return null;
   if (!user) return null;
@@ -35,56 +58,48 @@ export default function MyPage() {
     router.replace("/login");
   };
 
-  return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto w-full max-w-5xl">
+  const displayName = profileLoading
+    ? "読み込み中..."
+    : (profile?.name ?? "未設定");
 
-        {/* タイトル */}
-        <h1 className="mb-2 text-3xl font-bold">マイページ</h1>
-        <p className="mb-8 text-sm text-gray-700"style={{color : "#ffffff", }}>
-          ログイン中のユーザー情報とメニューです。
-        </p>
+  return (
+    <main className="mypage-root">
+      <div className="mypage-container">
+        <h1 className="mypage-title">マイページ</h1>
+        <p className="mypage-subtitle">ログイン中のユーザー情報とメニューです。</p>
 
         {/* ユーザー情報 */}
-        <section className="mb-10">
-          <h2 className="mb-2 text-lg font-semibold">ユーザー情報</h2>
-          <div className="rounded-lg border border-gray-200 bg-white px-5 py-4 text-sm text-black">
-            <p className="mb-1">
-              <span className="text-gray-500">メールアドレス:</span>{" "}
-              {user.email ?? "未設定"}
+        <section className="mypage-section">
+          <h2 className="mypage-section-title">ユーザー情報</h2>
+          <div className="user-card">
+            <p>
+              <span>メールアドレス:</span> {user.email ?? "未設定"}
             </p>
             <p>
-              <span className="text-gray-500">表示名:</span>{" "}
-              {user.displayName ?? "未設定"}
+              <span>表示名:</span> {displayName}
             </p>
           </div>
         </section>
 
-        {/* メニューカード */}
+        {/* メニュー */}
         <section>
-          <h2 className="mb-3 text-lg font-semibold"style={{color : "#ffffff", }}>メニュー</h2>
+          <h2 className="mypage-section-title">メニュー</h2>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="menu-grid">
+            <Link href="/profile" className="glass-card">
+              <h3>プロフィール設定</h3>
+              <p>設定を変更できます</p>
+            </Link>
 
-            <Link href="/profile" className={glassCard}>
-			  <h3 className="text-base font-semibold text-black mb-1"style={{color : "#ffffff", }}>プロフィール設定</h3>
-			  <p className="text-xs text-gray-700"style={{color : "#ffffff", }}>設定を変更できます。</p>
-			</Link>
-			
-			{/* HOME */}
-			<Link href="/home" className={glassCard}>
-			  <h3 className="text-base font-semibold text-black mb-1"style={{color : "#ffffff", }}>HOME</h3>
-			  <p className="text-xs text-gray-700"style={{color : "#ffffff", }}>HOMEに戻る</p>
-			</Link>
+            <Link href="/home" className="glass-card">
+              <h3>HOME</h3>
+              <p>HOMEに戻る</p>
+            </Link>
 
-            {/* ログアウト */}
-			<button
-			  onClick={handleLogout}
-			  className={`${glassCard} border-red-300`}
-			>
-			  <h3 className="text-base font-semibold text-red-600 mb-1">ログアウト</h3>
-			  <p className="text-xs text-red-500">サインアウトする</p>
-			</button>
+            <button onClick={handleLogout} className="glass-card danger-card">
+              <h3>ログアウト</h3>
+              <p>サインアウトする</p>
+            </button>
           </div>
         </section>
       </div>

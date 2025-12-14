@@ -1,0 +1,80 @@
+.page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.mapSection {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.mapContainer {
+  height: 520px;
+}
+
+.listSection {
+  margin-top: 24px;
+}
+
+.listTitle {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.loading {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.empty {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.itemRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemTitle {
+  font-weight: 600;
+}
+
+.coords {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.note {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+
+.status {
+  font-size: 0.875rem;
+}

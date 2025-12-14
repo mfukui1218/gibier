@@ -1,22 +1,17 @@
 // app/home/page.tsx
 "use client";
 
-import { type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import styles from "./home.module.css";
 
-const cardStyle: CSSProperties = {
-  background: "rgba(255,255,255,0.15)",
-  border: "1px solid rgba(255,255,255,0.4)",
-  borderRadius: 14,
-  padding: "20px 24px",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
-  backdropFilter: "blur(6px)",
-  cursor: "pointer",
-  transition: "all 0.25s",
-  color: "#fff",
+type MenuItem = {
+  title: string;
+  desc: string;
+  href: string;
+  variant?: "normal" | "logout" | "admin";
 };
 
 export default function HomeHubPage() {
@@ -28,184 +23,60 @@ export default function HomeHubPage() {
     router.replace("/login");
   }
 
+  const items: MenuItem[] = [
+    { title: "ジビエ肉一覧", desc: "取り扱い中のジビエ肉を見る", href: "/gibier" },
+    { title: "とれた獲物・ニュース", desc: "捕獲情報やニュース記事を読む", href: "/harvests" },
+    { title: "わなマップ", desc: "設置した罠の位置情報を見る", href: "/map" },
+  ];
+
+  // ログイン時だけ出す
+  const authedItems: MenuItem[] = user
+    ? [
+        { title: "マイページ", desc: "ユーザー情報を確認", href: "/mypage" },
+        { title: "お問い合わせ", desc: "お問い合わせフォームへ", href: "/contacts" },
+        { title: "ログアウト", desc: "サインアウトする", href: "#logout", variant: "logout" },
+        { title: "管理者用", desc: "admin画面へ", href: "/admin", variant: "admin" },
+      ]
+    : [];
+
+  function onClick(item: MenuItem) {
+    if (item.href === "#logout") return handleLogout();
+    router.push(item.href);
+  }
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: 40,
-        color: "#fff",
-      }}
-    >
-      {/* タイトル */}
-      <h1
-        style={{
-          fontSize: 32,
-          fontWeight: 700,
-          marginBottom: 30,
-          textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-        }}
-      >
-        HOME
-      </h1>
+    <main className={styles.page}>
+      <h1 className={styles.title}>HOME</h1>
 
-      {/* メニュー全体を広く使うグリッド */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 20,
-          width: "100%",
-        }}
-      >
-        {/* 1カード：ジビエ肉 */}
-        <div
-          style={cardStyle}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-            e.currentTarget.style.transform = "translateY(-3px)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-          onClick={() => router.push("/gibier")}
-        >
-          <h2 style={{ fontSize: 20, marginBottom: 6 }}>ジビエ肉一覧</h2>
-          <p style={{ fontSize: 14, opacity: 0.75 }}>
-            取り扱い中のジビエ肉を見る
-          </p>
-        </div>
+      <div className={styles.grid}>
+        {[...items, ...authedItems].map((item) => {
+          const cls =
+            item.variant === "logout"
+              ? `${styles.card} ${styles.logout}`
+              : item.variant === "admin"
+              ? `${styles.card} ${styles.adminCard}`
+              : styles.card;
 
-        {/* とれた獲物（ニュース） */}
-        <div
-          style={cardStyle}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-            e.currentTarget.style.transform = "translateY(-3px)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-          onClick={() => router.push("/harvests")}
-        >
-          <h2 style={{ fontSize: 20, marginBottom: 6 }}>とれた獲物・ニュース</h2>
-          <p style={{ fontSize: 14, opacity: 0.75 }}>
-            捕獲情報やニュース記事を読む
-          </p>
-        </div>
-
-        {/* 罠マップ */}
-        <div
-          style={cardStyle}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-            e.currentTarget.style.transform = "translateY(-3px)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-          onClick={() => router.push("/map")}
-        >
-          <h2 style={{ fontSize: 20, marginBottom: 6 }}>わなマップ</h2>
-          <p style={{ fontSize: 14, opacity: 0.75 }}>
-            設置した罠の位置情報を見る
-          </p>
-        </div>
-
-        {/* マイページ・ログアウト（ログイン時のみ） */}
-        {user && (
-          <>
-            <div
-              style={cardStyle}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-                e.currentTarget.style.transform = "translateY(-3px)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-              onClick={() => router.push("/mypage")}
-            >
-              <h2 style={{ fontSize: 20, marginBottom: 6 }}>マイページ</h2>
-              <p style={{ fontSize: 14, opacity: 0.75 }}>ユーザー情報を確認</p>
+          return (
+            <div key={item.title} className={cls} onClick={() => onClick(item)}>
+              <h2
+                className={
+                  item.variant === "admin" ? styles.adminTitle : styles.cardTitle
+                }
+              >
+                {item.title}
+              </h2>
+              <p
+                className={
+                  item.variant === "admin" ? styles.adminDesc : styles.cardDesc
+                }
+              >
+                {item.desc}
+              </p>
             </div>
-			<div
-				style={cardStyle}
-				onMouseOver={(e) => {
-				  e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-				  e.currentTarget.style.transform = "translateY(-3px)";
-				}}
-				onMouseOut={(e) => {
-				  e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-				  e.currentTarget.style.transform = "translateY(0)";
-				}}
-				onClick={() => router.push("/contacts")}
-				>
-				<h2 style={{ fontSize: 20, marginBottom: 6 }}>お問い合わせ</h2>
-				<p style={{ fontSize: 14, opacity: 0.75 }}>
-				  お問い合わせフォームへ
-				</p>
-			</div>
-
-            <div
-              style={{
-				  ...cardStyle,
-				  borderColor: "rgba(255,150,150,0.7)",
-				}}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = "rgba(255,120,120,0.3)";
-                e.currentTarget.style.transform = "translateY(-3px)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-              onClick={handleLogout}
-            >
-              <h2 style={{ fontSize: 20, marginBottom: 6 }}>ログアウト</h2>
-              <p style={{ fontSize: 14, opacity: 0.75 }}>サインアウトする</p>
-        </div>
-		<div
-		  style={{
-		    display: "grid",
-		    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-		    gap: 14,
-		    width: "1%",
-		  }}
-		>
-		  <div
-		    style={{
-		      padding: "1px 2px",
-		      background: "rgba(255,255,255,0.12)",
-		      borderRadius: 10,
-		      cursor: "pointer",
-		      transition: "all 0.2s",
-		      boxShadow: "0 3px 6px rgba(0,0,0,0.15)",
-		      textAlign: "center",
-		    }}
-		    onMouseOver={(e) => {
-		      e.currentTarget.style.background = "rgba(255,255,255,0.22)";
-		      e.currentTarget.style.transform = "translateY(-2px)";
-		    }}
-		    onMouseOut={(e) => {
-		      e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-		      e.currentTarget.style.transform = "translateY(0)";
-		    }}
-		    onClick={() => router.push("/admin")}
-		  >
-		    <h2 style={{ fontSize: 10, marginBottom: 4 }}>管理者用</h2>
-		  </div>
-		</div>
-		
-          </>
-        )}
+          );
+        })}
       </div>
     </main>
   );
 }
-
-
-

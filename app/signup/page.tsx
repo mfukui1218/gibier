@@ -86,6 +86,7 @@ export default function SignUpPage() {
       const functions = getFunctions(app, "us-central1");
       const requestAllowEmail = httpsCallable(functions, "requestAllowEmail");
       await requestAllowEmail({ email: requestEmail });
+      setRequestEmail("");
 
       setRequestStatus(
         "許可申請を送信しました。承認されると登録できるようになります。"

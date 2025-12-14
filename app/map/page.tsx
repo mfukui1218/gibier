@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import styles from "./TrapMapPage.module.css";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -41,6 +42,7 @@ export default function TrapMapPage() {
 
   const [items, setItems] = useState<Trap[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string>("");
 
   async function load() {
     setLoading(true);
@@ -67,8 +69,14 @@ export default function TrapMapPage() {
   }
 
   useEffect(() => {
+    if (user === undefined) return;        // ✅ 認証判定中は待つ
+    if (user === null) {                   // ✅ 未ログインなら読まない
+      setLoading(false);
+      setErr("ログインしてください");
+      return;
+    }
     load();
-  }, []);
+  }, [user]);
 
   const center = useMemo(() => {
     if (items[0]) return { lat: items[0].lat, lng: items[0].lng };
@@ -94,42 +102,41 @@ export default function TrapMapPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold">わなマップ</h1>
-
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>わなマップ</h1>
       </header>
 
       {/* 地図 */}
-      <section className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="h-[520px]">
+      <section className={styles.mapSection}>
+        <div className={styles.mapContainer}>
           <Map traps={items} />
         </div>
       </section>
 
       {/* 一覧 */}
-      <section className="space-y-3">
-        <div className="font-semibold">一覧</div>
+      <section className={styles.listSection}>
+        <div className={styles.listTitle}>一覧</div>
 
         {loading ? (
-          <div className="text-sm text-gray-600">読み込み中...</div>
+          <div className={styles.loading}>読み込み中...</div>
         ) : items.length === 0 ? (
-          <div className="text-sm text-gray-600">まだ罠がありません</div>
+          <div className={styles.empty}>まだ罠がありません</div>
         ) : (
-          <ul className="space-y-2">
+          <ul className={styles.list}>
             {items.map((t) => (
-              <li key={t.id} className="rounded-lg border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <li key={t.id} className={styles.item}>
+                <div className={styles.itemRow}>
                   <div>
-                    <div className="font-semibold">{t.title}</div>
-                    <div className="text-xs text-gray-600"style ={{color: "#ffffff"}}>
+                    <div className={styles.itemTitle}>{t.title}</div>
+                    <div className={styles.coords}>
                       {t.lat.toFixed(6)}, {t.lng.toFixed(6)}
                     </div>
-                    {t.note ? <div className="text-sm mt-1">{t.note}</div> : null}
+                    {t.note && (
+                      <div className={styles.note}>{t.note}</div>
+                    )}
                   </div>
-                  <div className="text-sm"style ={{color: "#ffffff"}}>
-                    状態: {t.status}
-                  </div>
+                  <div className={styles.status}>状態: {t.status}</div>
                 </div>
               </li>
             ))}

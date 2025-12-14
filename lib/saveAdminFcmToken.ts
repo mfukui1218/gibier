@@ -3,8 +3,7 @@
 
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-export const ADMIN_EMAIL = "ttnetnzua@gmail.com";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 export async function saveAdminFcmToken(params: {
   uid: string;

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import styles from "./harvests.module.css";
 
 type Harvest = {
   id: string;
@@ -13,64 +15,80 @@ type Harvest = {
 };
 
 export default function HarvestsPage() {
+  const user = useAuthUser();
   const [items, setItems] = useState<Harvest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string>("");
 
   useEffect(() => {
+    if (user === undefined) return;
+
+    if (user === null) {
+      setLoading(false);
+      setErr("ログインしてください");
+      return;
+    }
+
     const load = async () => {
       setLoading(true);
+      setErr("");
+
       try {
         const q = query(collection(db, "harvests"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+
         const list: Harvest[] = snap.docs.map((d) => ({
           id: d.id,
           ...(d.data() as any),
         }));
+
         setItems(list);
+      } catch (e: any) {
+        console.error("harvests load failed:", e);
+        setErr(e?.message ?? "読み込みに失敗しました");
+        setItems([]);
       } finally {
         setLoading(false);
       }
     };
+
     load();
-  }, []);
+  }, [user]);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8" style={{ background: "#ffffff" }}>
-      <h1 className="text-2xl font-bold mb-4" style={{ color: "#000000" }}>
-        とれた獲物の記録・ニュース
-      </h1>
-      <p className="text-sm mb-6" style={{ color: "#000000" }}>
+    <main className={styles.page}>
+      <h1 className={styles.title}>とれた獲物の記録・ニュース</h1>
+
+      <p className={styles.subtitle}>
         捕獲日や部位、写真などの情報をニュース形式で掲載しています。
       </p>
 
       {loading ? (
-        <p style={{ color: "#000" }}>読み込み中...</p>
+        <p className={styles.loading}>読み込み中...</p>
+      ) : err ? (
+        <p className={styles.error}>{err}</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className={styles.list}>
           {items.map((item) => (
-            <li key={item.id} className="border border-gray-200 rounded-lg p-4">
-              <p className="text-xs mb-1" style={{ color: "#000000" }}>
+            <li key={item.id} className={styles.item}>
+              <p className={styles.date}>
                 {item.date?.toDate?.()
                   ? item.date.toDate().toLocaleDateString("ja-JP")
                   : ""}
               </p>
 
-              <div className="flex gap-4 items-start">
+              <div className={styles.row}>
                 {item.imageUrl ? (
                   <img
                     src={item.imageUrl}
                     alt={item.title}
-                    className="h-24 w-36 rounded border border-gray-200 object-cover"
+                    className={styles.thumb}
                   />
                 ) : null}
 
                 <div>
-                  <p className="text-lg font-semibold" style={{ color: "#000000" }}>
-                    {item.title}
-                  </p>
-                  <p className="text-sm mt-1" style={{ color: "#000000" }}>
-                    {item.summary}
-                  </p>
+                  <p className={styles.itemTitle}>{item.title}</p>
+                  <p className={styles.summary}>{item.summary}</p>
                 </div>
               </div>
             </li>

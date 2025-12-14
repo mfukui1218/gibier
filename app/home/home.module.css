@@ -1,0 +1,72 @@
+.page {
+  min-height: 100vh;
+  padding: 40px;
+  color: #fff;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+/* 共通カード */
+.card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: transform 0.25s, background 0.25s, box-shadow 0.25s;
+  color: #fff;
+  text-align: left;
+}
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-3px);
+}
+
+.cardTitle {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.cardDesc {
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+/* ログアウトだけ赤寄り */
+.logout {
+  border-color: rgba(255, 150, 150, 0.7);
+}
+
+.logout:hover {
+  background: rgba(255, 120, 120, 0.3);
+}
+
+/* 管理者用カード（小さめ） */
+.adminCard {
+  padding: 12px 14px;
+}
+
+.adminTitle {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.adminDesc {
+  font-size: 12px;
+  opacity: 0.75;
+}

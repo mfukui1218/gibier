@@ -1,53 +1,50 @@
 // app/admin/lib/allowedEmails.ts
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-  deleteDoc,
-} from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 
 export type AllowedEmail = {
-  email: string;
+  id: string;            // docId（今は email をそのままIDにしてOK）
+  email: string;         // 表示用メール
   createdAtText?: string;
 };
 
 export async function fetchAllowedEmails(): Promise<AllowedEmail[]> {
   const snap = await getDocs(collection(db, "allowedEmails"));
-  const list: AllowedEmail[] = snap.docs
+
+  return snap.docs
     .map((d) => {
       const data = d.data() as any;
-      const raw = data.createdAt;
+      const email = (data.email ?? d.id) as string;
 
       return {
-        email: d.id,
-        createdAtText:
-          raw && typeof raw.toDate === "function"
-            ? raw.toDate().toLocaleString("ja-JP")
-            : undefined,
+        id: d.id,
+        email,
+        createdAtText: data.createdAt?.toDate?.()?.toLocaleString("ja-JP"),
       };
     })
     .sort((a, b) => a.email.localeCompare(b.email));
-
-  return list;
 }
 
 export async function addAllowedEmail(rawEmail: string): Promise<AllowedEmail> {
-  const normalized = rawEmail.trim().toLowerCase();
+  const email = rawEmail.trim().toLowerCase();
   const now = new Date();
 
-  await setDoc(doc(db, "allowedEmails", normalized), {
+  // ✅ docId も email に統一（まずはこれで安定させる）
+  const id = email;
+
+  await setDoc(doc(db, "allowedEmails", id), {
+    email,
     createdAt: now,
   });
 
   return {
-    email: normalized,
+    id,
+    email,
     createdAtText: now.toLocaleString("ja-JP"),
   };
 }
 
-export async function removeAllowedEmail(rawEmail: string): Promise<void> {
-  const normalized = rawEmail.trim().toLowerCase();
-  await deleteDoc(doc(db, "allowedEmails", normalized));
+export async function removeAllowedEmail(emailOrId: string): Promise<void> {
+  const id = emailOrId.trim().toLowerCase();
+  await deleteDoc(doc(db, "allowedEmails", id));
 }

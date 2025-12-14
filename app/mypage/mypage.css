@@ -1,0 +1,116 @@
+/* 全体 */
+.mypage-root {
+  min-height: 100vh;
+  padding: 2.5rem 1.5rem;
+  color: #ffffff;
+}
+
+.mypage-container {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+/* タイトル */
+.mypage-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.mypage-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+/* セクション */
+.mypage-section {
+  margin-bottom: 2.5rem;
+}
+
+.mypage-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+/* ユーザー情報カード */
+.user-card {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+}
+
+.user-card span {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* メニューグリッド */
+.menu-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ガラスカード */
+.glass-card {
+  display: block;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  text-align: left;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.glass-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.glass-card p {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ログアウト（危険） */
+.danger-card {
+  border-color: rgba(255, 120, 120, 0.6);
+  background: rgba(255, 80, 80, 0.15);
+}
+
+.danger-card:hover {
+  background: rgba(255, 80, 80, 0.3);
+}
+
+.danger-card h3 {
+  color: #ffb3b3;
+}
+
+.danger-card p {
+  color: #ffcccc;
+}

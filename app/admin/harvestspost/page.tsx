@@ -17,8 +17,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { uploadHarvestImage } from "./uploadImage";
-
-const ADMIN_EMAIL = "ttnetnzua@gmail.com";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 type Harvest = {
   id: string;

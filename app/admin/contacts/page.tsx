@@ -13,8 +13,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useAuthUser } from "@/hooks/useAuthUser";
-
-const ADMIN_EMAIL = "ttnetnzua@gmail.com";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 function formatDate(ts: any) {
   if (!ts) return "-";

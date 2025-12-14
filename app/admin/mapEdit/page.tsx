@@ -18,9 +18,8 @@ import {
 
 const Map = dynamic(() => import("./TrapMapClient"), { ssr: false });
 
-const ADMIN_EMAIL = "ttnetnzua@gmail.com";
-
 type Status = "active" | "inactive" | "hit" | "removed";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 export type Trap = {
   id: string;
