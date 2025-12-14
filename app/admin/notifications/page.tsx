@@ -1,30 +1,46 @@
+// app/admin/notifications/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import {
   collection,
-  deleteDoc,
-  doc,
   getDocs,
   limit,
   orderBy,
   query,
-  updateDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "")
+  .toLowerCase()
+  .trim();
 
-type AdminNotification = {
+type ReqItem = {
   id: string;
-  type?: "request" | "contact" | string;
-  title?: string;
-  body?: string;
-  read?: boolean;
   createdAt?: any;
+  email?: string;
+  userEmail?: string;
+  partId?: string;
+  partName?: string;
+  amount?: string;
+  message?: string;
+  status?: string; // もしあるなら
+};
+
+type ContactItem = {
+  id: string;
+  createdAt?: any;
+  name?: string;
+  email?: string;
+  message?: string;
+};
+
+type AllowReqItem = {
+  id: string;
+  createdAt?: any;
+  email: string;
 };
 
 function formatTime(ts: any) {
@@ -41,115 +57,74 @@ export default function AdminNotificationsPage() {
   const user = useAuthUser();
   const router = useRouter();
 
-  const isAdmin =
-    (user?.email ?? "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = useMemo(() => {
+    const email = (user?.email ?? "").toLowerCase().trim();
+    return email !== "" && email === ADMIN_EMAIL;
+  }, [user]);
 
-  const [items, setItems] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
-  // ✅ ログは useEffect（レンダー毎に出さない）
-  useEffect(() => {
-    console.log("[AdminNotifications] hook user =", user?.uid, user?.email);
-    console.log(
-      "[AdminNotifications] auth.currentUser =",
-      auth.currentUser?.uid,
-      auth.currentUser?.email
-    );
-  }, [user?.uid, user?.email]);
+  const [requests, setRequests] = useState<ReqItem[]>([]);
+  const [contacts, setContacts] = useState<ContactItem[]>([]);
+  const [allowRequests, setAllowRequests] = useState<AllowReqItem[]>([]);
 
-  // ✅ 未ログインなら /login へ
+  // 未ログインなら /login
   useEffect(() => {
     if (user === null) router.replace("/login");
   }, [user, router]);
 
   async function load() {
-    // ✅ 保険：admin以外は絶対にFirestore触らない
     if (!isAdmin) return;
 
     setLoading(true);
-    try {
-      const q = query(
-        collection(db, "adminNotifications"),
-        orderBy("createdAt", "desc"),
-        limit(200)
-      );
-      const snap = await getDocs(q);
+    setErr("");
 
-      const list: AdminNotification[] = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as any),
-      }));
-      setItems(list);
-    } catch (e) {
-      console.error("[AdminNotifications] load error:", e);
-      setItems([]);
+    try {
+      const qReq = query(
+        collection(db, "requests"),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      const qCon = query(
+        collection(db, "contacts"),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      const qAllow = query(
+        collection(db, "allowRequests"),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+
+      const [sReq, sCon, sAllow] = await Promise.all([
+        getDocs(qReq),
+        getDocs(qCon),
+        getDocs(qAllow),
+      ]);
+
+      setRequests(sReq.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+      setContacts(sCon.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+      setAllowRequests(
+        sAllow.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
+      );
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "読み込みに失敗しました");
+      setRequests([]);
+      setContacts([]);
+      setAllowRequests([]);
     } finally {
       setLoading(false);
     }
   }
 
-  // ✅ adminになった瞬間だけ読み込み
+  // adminになったら読む
   useEffect(() => {
     if (!isAdmin) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
-
-  const unreadCount = useMemo(
-    () => items.filter((x) => x.read !== true).length,
-    [items]
-  );
-
-  async function markRead(id: string) {
-    if (!isAdmin) return;
-    try {
-      await updateDoc(doc(db, "adminNotifications", id), {
-        read: true,
-        readAt: serverTimestamp(),
-      });
-      setItems((prev) =>
-        prev.map((x) => (x.id === id ? { ...x, read: true } : x))
-      );
-    } catch (e) {
-      console.error(e);
-      alert("既読に失敗しました");
-    }
-  }
-
-  async function markAllRead() {
-    if (!isAdmin) return;
-    const targets = items.filter((x) => x.read !== true);
-    if (targets.length === 0) return;
-
-    try {
-      await Promise.all(
-        targets.map((n) =>
-          updateDoc(doc(db, "adminNotifications", n.id), {
-            read: true,
-            readAt: serverTimestamp(),
-          })
-        )
-      );
-      setItems((prev) => prev.map((x) => ({ ...x, read: true })));
-    } catch (e) {
-      console.error(e);
-      alert("一括既読に失敗しました");
-    }
-  }
-
-  async function remove(id: string) {
-    if (!isAdmin) return;
-    const ok = window.confirm("この通知を削除しますか？");
-    if (!ok) return;
-
-    try {
-      await deleteDoc(doc(db, "adminNotifications", id));
-      setItems((prev) => prev.filter((x) => x.id !== id));
-    } catch (e) {
-      console.error(e);
-      alert("削除に失敗しました");
-    }
-  }
 
   if (user === undefined) return <main className="p-6">読み込み中...</main>;
   if (user === null) return null;
@@ -164,23 +139,14 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-4">
+    <main className="mx-auto max-w-5xl p-6 space-y-6">
       <header className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">通知（管理）</h1>
-          <p className="text-sm text-white mt-1">
-            未読: <span className="font-semibold">{unreadCount}</span>
-          </p>
+          <h1 className="text-2xl font-bold">統合管理</h1>
+          <p className="text-sm text-white mt-1">ログイン中：{user.email}</p>
         </div>
 
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={markAllRead}
-            className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold"
-          >
-            すべて既読
-          </button>
           <button
             type="button"
             onClick={load}
@@ -191,70 +157,124 @@ export default function AdminNotificationsPage() {
         </div>
       </header>
 
+      {err ? <p className="text-sm text-red-300">{err}</p> : null}
+
       {loading ? (
-        <div className="text-sm text-gray-600">読み込み中...</div>
-      ) : items.length === 0 ? (
-        <div className="text-sm text-gray-600">通知はありません。</div>
+        <div className="text-sm text-gray-200">読み込み中...</div>
       ) : (
-        <ul className="space-y-2">
-          {items.map((n) => {
-            const isUnread = n.read !== true;
-            return (
-              <li
-                key={n.id}
-                className={`rounded-xl border p-4 ${
-                  isUnread
-                    ? "border-black/20 bg-transparent"
-                    : "border-gray-200 bg-transparent"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {isUnread ? (
-                        <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
-                      ) : null}
-                      <div className="font-semibold truncate">
-                        {n.title ?? "(no title)"}
-                      </div>
-                      <div className="text-xs text-white">{n.type ?? "unknown"}</div>
-                    </div>
+        <section className="grid gap-4 md:grid-cols-2">
+          {/* requests */}
+          <div className="rounded-xl border border-white/20 bg-black/20 p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">部位リクエスト（requests）</h2>
+              <span className="text-xs text-white/80">{requests.length} 件</span>
+            </div>
 
-                    {n.body ? (
-                      <div className="text-sm text-white mt-1 whitespace-pre-wrap">
-                        {n.body}
+            {requests.length === 0 ? (
+              <p className="text-sm text-white/80 mt-3">まだありません。</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {requests.slice(0, 10).map((r) => (
+                  <li key={r.id} className="rounded-lg border border-white/15 bg-white/5 p-3">
+                    <div className="text-sm font-semibold">
+                      {(r.userEmail ?? r.email ?? "unknown")}
+                    </div>
+                    <div className="text-sm text-white/90 mt-1">
+                      {r.partName ?? r.partId ?? "-"} / {r.amount ?? "-"}
+                    </div>
+                    {r.message ? (
+                      <div className="text-xs text-white/80 mt-1 whitespace-pre-wrap">
+                        {String(r.message).slice(0, 80)}
+                        {String(r.message).length > 80 ? "…" : ""}
                       </div>
                     ) : null}
-
-                    <div className="text-xs text-white mt-2">
-                      {formatTime(n.createdAt)}
+                    <div className="text-xs text-white/70 mt-2">
+                      {formatTime(r.createdAt)}
+                      {r.status ? ` / status: ${r.status}` : ""}
                     </div>
-                  </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-                  <div className="flex shrink-0 gap-2">
-                    {isUnread ? (
-                      <button
-                        type="button"
-                        onClick={() => markRead(n.id)}
-                        className="rounded border border-gray-300 px-3 py-1.5 text-sm font-semibold"
-                      >
-                        既読
-                      </button>
-                    ) : null}
+            <button
+              type="button"
+              className="mt-3 text-xs underline text-white/90"
+              onClick={() => router.push("/admin/requestlist")}
+            >
+              もっと見る →
+            </button>
+          </div>
 
-                    <button
-                      type="button"
-                      onClick={() => remove(n.id)}
-                      className="rounded bg-red-600 px-3 py-1.5 text-sm font-semibold text-white"
-                    >
-                      削除
-                    </button>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+          {/* contacts */}
+          <div className="rounded-xl border border-white/20 bg-black/20 p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">問い合わせ（contacts）</h2>
+              <span className="text-xs text-white/80">{contacts.length} 件</span>
+            </div>
+
+            {contacts.length === 0 ? (
+              <p className="text-sm text-white/80 mt-3">まだありません。</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {contacts.slice(0, 10).map((c) => (
+                  <li key={c.id} className="rounded-lg border border-white/15 bg-white/5 p-3">
+                    <div className="text-sm font-semibold">
+                      {c.name ?? "（名前なし）"}
+                      {c.email ? <span className="text-xs text-white/70"> / {c.email}</span> : null}
+                    </div>
+                    <div className="text-xs text-white/80 mt-1 whitespace-pre-wrap">
+                      {String(c.message ?? "").slice(0, 90)}
+                      {String(c.message ?? "").length > 90 ? "…" : ""}
+                    </div>
+                    <div className="text-xs text-white/70 mt-2">
+                      {formatTime(c.createdAt)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button
+              type="button"
+              className="mt-3 text-xs underline text-white/90"
+              onClick={() => router.push("/admin/contacts")}
+            >
+              もっと見る →
+            </button>
+          </div>
+
+          {/* allowRequests */}
+          <div className="rounded-xl border border-white/20 bg-black/20 p-4 md:col-span-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">許可申請（allowRequests）</h2>
+              <span className="text-xs text-white/80">{allowRequests.length} 件</span>
+            </div>
+
+            {allowRequests.length === 0 ? (
+              <p className="text-sm text-white/80 mt-3">申請はありません。</p>
+            ) : (
+              <ul className="mt-3 grid gap-2 md:grid-cols-2">
+                {allowRequests.slice(0, 12).map((a) => (
+                  <li key={a.id} className="rounded-lg border border-white/15 bg-white/5 p-3">
+                    <div className="text-sm font-semibold">{a.email}</div>
+                    <div className="text-xs text-white/70 mt-2">
+                      {formatTime(a.createdAt)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button
+              type="button"
+              className="mt-3 text-xs underline text-white/90"
+              onClick={() => router.push("/admin/allowed")}
+            >
+              許可管理へ →
+            </button>
+          </div>
+        </section>
       )}
     </main>
   );

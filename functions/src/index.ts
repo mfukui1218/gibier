@@ -7,4 +7,6 @@ if (!admin.apps.length) {
 export { checkAllowedEmail, requestAllowEmail } from "./auth";
 export { onNotificationCreate } from "./notifications";
 export { notifyAdmins } from "./notifyAdmins";
-export { onContactCreated } from "./contactsNotify";
+export { onContactCreated } from "./onContactCreated";
+export { onRequestCreated } from "./onRequestCreated";
+export { onAllowRequestCreated } from "./onAllowRequestCreated";
