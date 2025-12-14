@@ -4,9 +4,13 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-export { checkAllowedEmail, requestAllowEmail } from "./auth";
-export { onNotificationCreate } from "./notifications";
-export { notifyAdmins } from "./notifyAdmins";
-export { onContactCreated } from "./onContactCreated";
-export { onRequestCreated } from "./onRequestCreated";
-export { onAllowRequestCreated } from "./onAllowRequestCreated";
+// 既存のauth系
+export { checkAllowedEmail, requestAllowEmail } from "./lib/auth";
+
+// triggers（Firestoreの作成イベント）
+export { onContactCreated } from "./triggers/onContactCreated";
+export { onRequestCreated } from "./triggers/onRequestCreated";
+export { onAllowRequestCreated } from "./triggers/onAllowRequestCreated";
+
+// notifyAdmins を使ってないなら export消してOK
+export { notifyAdmins } from "./lib/notifyAdmins";
