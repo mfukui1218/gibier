@@ -1,35 +1,18 @@
+// functions/src/lib/adminTokens.ts
 import * as admin from "firebase-admin";
 
-type AdminTokenDoc = {
-  token?: unknown;
-};
+type AdminTokenDoc = { token?: unknown };
 
 export async function getAdminTokens(): Promise<string[]> {
   const snap = await admin.firestore().collection("adminTokens").get();
 
-  const tokens = Array.from(
+  return Array.from(
     new Set(
       snap.docs
-        .map((d) => {
-          const data = d.data() as AdminTokenDoc;
-
-          // ① tokenフィールドがあればそれを使う
-          if (typeof data?.token === "string" && data.token.length > 0) {
-            return data.token;
-          }
-
-          // ② 無ければ docId を token として扱う（docId=token運用）
-          if (typeof d.id === "string" && d.id.length > 0) {
-            return d.id;
-          }
-
-          return "";
-        })
+        .map((d) => (d.data() as AdminTokenDoc)?.token)
         .filter((t): t is string => typeof t === "string" && t.length > 0)
     )
   );
-
-  return tokens;
 }
 
 /**

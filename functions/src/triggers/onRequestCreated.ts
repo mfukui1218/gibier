@@ -1,11 +1,14 @@
+// functions/src/triggers/onRequestCreated.ts
 import * as admin from "firebase-admin";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getAdminTokens } from "../lib/adminTokens";
-import { sendPushToAdmins } from "../lib/push";
+import { shouldProcessOnce } from "../lib/dedupe";
+
 
 if (!admin.apps.length) admin.initializeApp();
 
 const db = admin.firestore();
+const messaging = admin.messaging();
 
 export const onRequestCreated = onDocumentCreated(
   {
@@ -14,6 +17,13 @@ export const onRequestCreated = onDocumentCreated(
   },
   async (event) => {
     console.log("🔥 onRequestCreated fired");
+    const ok = await shouldProcessOnce(`request_${event.params.requestId}`);
+    if (!ok) {
+      console.log("🟡 duplicate detected -> skip");
+      return;
+    }
+
+
 
     const data = event.data?.data();
     if (!data) {
@@ -21,53 +31,40 @@ export const onRequestCreated = onDocumentCreated(
       return;
     }
 
-    // ===== 内容整形 =====
+    // 表示用テキスト
     const animal = String(data.animal ?? "");
     const part = String(data.part ?? "");
-    const grams = String(data.grams ?? data.g ?? "");
-    const body = `${animal ? animal + " " : ""}${part}${grams ? ` / ${grams}g` : ""}`.trim();
+    const grams = String(data.grams ?? "");
+    const text = `${animal ? animal + " " : ""}${part}${grams ? ` / ${grams}g` : ""}`.trim();
 
-    // ===== アプリ内通知 =====
+    // --- アプリ内通知（DB） ---
     await db.collection("adminNotifications").add({
       type: "request",
       title: "部位リクエストが届きました",
-      body: body || "(内容なし)",
+      body: text || "(内容なし)",
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       url: "/admin/requestlist",
       refId: event.params.requestId,
     });
 
-    // ===== push（ここが問題の可能性）=====
+    // --- push通知（data-only） ---
     const tokens = await getAdminTokens();
-    console.log("🔥 adminTokens size =", tokens.length);
-    console.log("🔥 tokens =", tokens);
+    console.log("🔥 adminTokens =", tokens);
 
-    if (!tokens.length) {
-      console.log("⚠️ no admin tokens, skip push");
-      return;
-    }
+    if (!tokens.length) return;
 
-    await sendPushToAdmins({
+    await messaging.sendEachForMulticast({
       tokens,
-      title: "部位リクエストが届きました",
-      body: (body || "(内容なし)").slice(0, 60),
+      // ❌ notification は絶対に書かない
       data: {
+        title: "部位リクエストが届きました",
+        body: (text || "(内容なし)").slice(0, 60),
         url: "/admin/requestlist",
-        requestId: String(event.params.requestId ?? ""),
+        requestId: String(event.params.requestId),
       },
     });
-    console.log("🔥 fired requestId =", event.params.requestId);
-    console.log("🔥 event.id =", (event as any).id); // v2 CloudEvent の id
-    console.log("✅ push sent");
-    await sendPushToAdmins({
-      tokens,
-      title: "部位リクエストが届きました",
-      body: (body || "(内容なし)").slice(0, 60),
-      data: {
-        url: "/admin/requestlist",
-        requestId: String(event.params.requestId ?? ""),
-      },
-    });
+
+    console.log("✅ push sent (data-only)");
   }
 );
