@@ -11,6 +11,3 @@ export { checkAllowedEmail, requestAllowEmail } from "./lib/auth";
 export { onContactCreated } from "./triggers/onContactCreated";
 export { onRequestCreated } from "./triggers/onRequestCreated";
 export { onAllowRequestCreated } from "./triggers/onAllowRequestCreated";
-
-// notifyAdmins を使ってないなら export消してOK
-export { notifyAdmins } from "./lib/notifyAdmins";

@@ -85,19 +85,6 @@ export default function AdminTopPage() {
         email: user.email ?? "",
         token,
       });
-
-      onMessage(messaging, (payload) => {
-        console.log("Foreground message:", payload);
-        if (Notification.permission !== "granted") return;
-
-        const title = payload.notification?.title ?? "通知";
-        const body = payload.notification?.body ?? "";
-        new Notification(title, {
-          body,
-          icon: "/icons/icon-192.png",
-          data: payload.data ?? {},
-        });
-      });
     };
 
     run().catch((e) => console.error("Notif init failed:", e));

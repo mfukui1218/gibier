@@ -89,6 +89,7 @@ function RequestPageInner() {
       setAddress("");
       setPartId("");
       setTimeout(() => setMessage(""), 4000);
+      router.push("/home");
     } catch (err) {
       console.error(err);
       setMessage("送信に失敗しました");

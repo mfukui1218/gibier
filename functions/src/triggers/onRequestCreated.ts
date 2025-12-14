@@ -13,16 +13,21 @@ export const onRequestCreated = onDocumentCreated(
     region: "us-central1",
   },
   async (event) => {
-    const data = event.data?.data();
-    if (!data) return;
+    console.log("🔥 onRequestCreated fired");
 
+    const data = event.data?.data();
+    if (!data) {
+      console.log("❌ no data");
+      return;
+    }
+
+    // ===== 内容整形 =====
     const animal = String(data.animal ?? "");
     const part = String(data.part ?? "");
     const grams = String(data.grams ?? data.g ?? "");
-
     const body = `${animal ? animal + " " : ""}${part}${grams ? ` / ${grams}g` : ""}`.trim();
 
-    // ① アプリ内通知
+    // ===== アプリ内通知 =====
     await db.collection("adminNotifications").add({
       type: "request",
       title: "部位リクエストが届きました",
@@ -33,10 +38,28 @@ export const onRequestCreated = onDocumentCreated(
       refId: event.params.requestId,
     });
 
-    // ② push（スマホ通知）
+    // ===== push（ここが問題の可能性）=====
     const tokens = await getAdminTokens();
-    if (!tokens.length) return;
+    console.log("🔥 adminTokens size =", tokens.length);
+    console.log("🔥 tokens =", tokens);
 
+    if (!tokens.length) {
+      console.log("⚠️ no admin tokens, skip push");
+      return;
+    }
+
+    await sendPushToAdmins({
+      tokens,
+      title: "部位リクエストが届きました",
+      body: (body || "(内容なし)").slice(0, 60),
+      data: {
+        url: "/admin/requestlist",
+        requestId: String(event.params.requestId ?? ""),
+      },
+    });
+    console.log("🔥 fired requestId =", event.params.requestId);
+    console.log("🔥 event.id =", (event as any).id); // v2 CloudEvent の id
+    console.log("✅ push sent");
     await sendPushToAdmins({
       tokens,
       title: "部位リクエストが届きました",
