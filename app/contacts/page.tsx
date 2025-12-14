@@ -54,6 +54,7 @@ export default function ContactPage() {
 
       setStatus("送信しました！");
       setMessage("");
+      router.push("/home");
     } catch (err) {
       console.error(err);
       setStatus("送信に失敗しました");

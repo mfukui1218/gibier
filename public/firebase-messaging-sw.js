@@ -18,13 +18,15 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // バックグラウンド通知（アプリ開いてない/別タブ等）を受ける
+
 messaging.onBackgroundMessage((payload) => {
-  const title = payload?.notification?.title || "通知";
+  const data = payload.data || {};
+  const title = data.title || "通知";
   const options = {
-    body: payload?.notification?.body || "",
+    body: data.body || "",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    data: payload?.data || {},
+    data,
   };
 
   self.registration.showNotification(title, options);

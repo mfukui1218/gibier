@@ -1,50 +1,50 @@
 import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
 
-// index.ts で一回だけ初期化
 if (!admin.apps.length) admin.initializeApp();
 
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-export const notifyAdmins = onRequest(async (req, res) => {
+export const notifyAdmins = onRequest({ region: "us-central1" }, async (req, res) => {
   try {
-    const { title, body, url } = req.body ?? {};
+    // ✅ HTTPSなので event.params は存在しない。全部 req.body から受け取る
+    const { title, body, url, requestId } = req.body ?? {};
 
-    if (!title || !body) {
-      res.status(400).send("title and body are required");
+    if (typeof title !== "string" || title.trim() === "") {
+      res.status(400).send("title is required");
+      return;
+    }
+    if (typeof body !== "string" || body.trim() === "") {
+      res.status(400).send("body is required");
       return;
     }
 
-    // adminTokens 取得
+    // ✅ adminTokens 取得（tokenフィールドを読む）
     const snap = await db.collection("adminTokens").get();
-    const tokens: string[] = [];
-    snap.forEach((doc) => {
-      const t = doc.data()?.token;
-      if (typeof t === "string" && t.length > 0) tokens.push(t);
-    });
+    const tokens = Array.from(
+      new Set(
+        snap.docs
+          .map((d) => d.data()?.token)
+          .filter((t): t is string => typeof t === "string" && t.length > 0)
+      )
+    );
 
     if (tokens.length === 0) {
       res.status(200).send("No valid tokens");
       return;
     }
 
-    // ✅ sendMulticast ではなく sendEachForMulticast を使う
+    // ✅ data-only push（SW側で showNotification する前提）
     const result = await messaging.sendEachForMulticast({
       tokens,
-      notification: { title, body },
-      data: { url: url || "/admin" },
+      data: {
+        title: title,
+        body: body.slice(0, 60),
+        url: typeof url === "string" && url ? url : "/admin",
+        requestId: typeof requestId === "string" ? requestId : "",
+      },
     });
-
-    // 無効トークン掃除（任意だけど超おすすめ）
-    const invalidIdx: number[] = [];
-    result.responses.forEach((r, i) => {
-      if (!r.success) invalidIdx.push(i);
-    });
-
-    // よくある：UNREGISTERED / registration-token-not-registered などはDBから消す
-    // （コードは簡略。doc構造に合わせて削除して）
-    // invalidIdx.forEach(i => ...tokens[i] を削除)
 
     res.status(200).json({
       successCount: result.successCount,

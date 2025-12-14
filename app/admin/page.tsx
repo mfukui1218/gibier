@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { app } from "@/lib/firebase";
 import { saveAdminFcmToken} from "@/lib/saveAdminFcmToken";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken } from "firebase/messaging";
 
 import styles from "./admin.module.css";
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
