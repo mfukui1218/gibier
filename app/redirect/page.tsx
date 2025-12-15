@@ -1,18 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
-
 export default function RedirectPage() {
-  useEffect(() => {
-    // 外部ブラウザに制御を渡す
-    window.location.href = "/login";
-  }, []);
-
   return (
     <main style={{ padding: 24 }}>
-      <p>ブラウザを切り替えています…</p>
-      <p>自動で進まない場合は下のリンクを押してください。</p>
-      <a href="/login">ログイン画面へ</a>
+      <h2>外部ブラウザで開いてください</h2>
+
+      <p>
+        LINEアプリ内ブラウザではログインが正常に動作しません。
+        <br />
+        下のボタンを押して Safari / Chrome で開いてください。
+      </p>
+
+      <a
+        href="/login"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-block",
+          marginTop: 16,
+          padding: "12px 16px",
+          background: "#06c755",
+          color: "#fff",
+          borderRadius: 8,
+          textDecoration: "none",
+        }}
+      >
+        外部ブラウザで開く
+      </a>
     </main>
   );
 }
