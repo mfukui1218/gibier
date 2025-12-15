@@ -12,7 +12,7 @@ export default function RedirectPage() {
       </p>
 
       <a
-  		href="https://gibier.app/login"
+  		href="https://gibier-pad8.vercel.app"
         target="_blank"
         rel="noopener noreferrer"
         style={{
