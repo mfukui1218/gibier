@@ -2,19 +2,58 @@
 "use client";
 
 import { useState } from "react";
-
-import { auth, app } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import "./login.css"; // ★ 追加
+import "./login.css";
 import {handleGoogleLogin} from "./components/GoogleLoginButton"
 import {handleAppleLogin} from "./components/AppleLoginButton"
-import {handleSubmit}from "./components/LoginButton"
+import {loginWithEmailPassword}from "./lib/loginActions"
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    try {
+      await loginWithEmailPassword({ email, password });
+      router.push("/profile");
+    } catch (e) {
+      console.warn(e);
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("ログインに失敗しました");
+      }
+    }
+  }
+
+  async function onGoogleClick() {
+    setError("");
+    try {
+      await handleGoogleLogin();
+      router.push("/profile");
+    } catch (e) {
+      console.warn(e);
+      if (e instanceof Error) setError(e.message);
+      else setError("Googleログインに失敗しました");
+    }
+  }
+
+  async function onAppleClick() {
+    setError("");
+    try {
+      await handleAppleLogin();
+      router.push("/profile");
+    } catch (e) {
+      console.warn(e);
+      if (e instanceof Error) setError(e.message);
+      else setError("Appleログインに失敗しました");
+    }
+  }
 
   return (
     <main className="login-root">
@@ -44,15 +83,7 @@ export default function LoginPage() {
 
           <button
             type="button"
-            onClick={async () => {
-              setError("");
-              try {
-                await handleGoogleLogin();
-                router.push("/profile");
-              } catch (e: any) {
-                setError(e?.message ?? "Googleログインに失敗しました");
-              }
-            }}
+            onClick={onGoogleClick}
             className="login-button"
           >
             Googleでログイン
@@ -60,18 +91,10 @@ export default function LoginPage() {
 
           <button
             type="button"
-            onClick={async () => {
-              setError("");
-              try {
-                await handleAppleLogin();
-                router.push("/profile");
-              } catch (e: any) {
-                setError(e?.message ?? "Appleログインに失敗しました");
-              }
-            }}
+            onClick={onAppleClick}
             className="login-button"
           >
-            Aooleでログイン
+            Appleでログイン
           </button>
 
           <button

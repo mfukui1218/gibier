@@ -25,13 +25,6 @@ export async function handleAppleLogin() {
     if (typeof saved === "string") email = saved.toLowerCase().trim();
   }
 
-  if (info?.isNewUser && !snap.exists()) {
-    await setDoc(userRef, {
-      email: email || null,
-      createdAt: serverTimestamp(),
-    });
-  }
-
   if (!email) {
     await signOut(auth);
     throw new Error("Apple からメールが取得できませんでした。");
@@ -43,9 +36,10 @@ export async function handleAppleLogin() {
     throw new Error("このメールアドレスではログインできません。");
   }
 
+  // 初回だけ users を作成
   if (!snap.exists()) {
     await setDoc(userRef, {
-      email,
+      email: email || null,
       name: user.displayName ?? "",
       provider: "apple.com",
       createdAt: serverTimestamp(),
