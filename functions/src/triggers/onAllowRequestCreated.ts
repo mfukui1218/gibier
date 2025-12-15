@@ -34,6 +34,9 @@ export const onAllowRequestCreated = onDocumentCreated(
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       url: "/admin/allowed",
       refId: event.params.requestId,
+      expiresAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + 1000 * 60 * 60 * 24 * 30
+      ),
     });
 
     // ② push（スマホ通知）

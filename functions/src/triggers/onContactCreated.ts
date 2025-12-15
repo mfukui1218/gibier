@@ -36,6 +36,9 @@ export const onContactCreated = onDocumentCreated(
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       url: "/admin/contacts",
       refId: event.params.contactId,
+      expiresAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + 1000 * 60 * 60 * 24 * 30
+      ),
     });
 
     // ② push

@@ -46,6 +46,9 @@ export const onRequestCreated = onDocumentCreated(
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       url: "/admin/requestlist",
       refId: event.params.requestId,
+      expiresAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + 1000 * 60 * 60 * 24 * 30
+      ),
     });
 
     // --- push通知（data-only） ---
