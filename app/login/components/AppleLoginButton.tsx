@@ -1,6 +1,11 @@
 "use client";
 
-import { OAuthProvider, signInWithPopup, getAdditionalUserInfo, signOut } from "firebase/auth";
+import {
+  OAuthProvider,
+  signInWithPopup,
+  getAdditionalUserInfo,
+  signOut,
+} from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { checkAllowedOrAdmin } from "../lib/authGate";
@@ -18,11 +23,19 @@ export async function handleAppleLogin() {
   const userRef = doc(db, "users", user.uid);
   const snap = await getDoc(userRef);
 
-  // Appleは2回目以降emailが空になりがち → Firestore保存値で救済
+  // Apple は2回目以降 email が空になりがち → Firestore保存値で救済
   let email = user.email?.toLowerCase().trim() ?? "";
   if (!email && snap.exists()) {
     const saved = snap.data()?.email;
     if (typeof saved === "string") email = saved.toLowerCase().trim();
+  }
+
+  // 初回ログインのときだけ users を最低限作る（Googleと同じ）
+  if (info?.isNewUser && !snap.exists()) {
+    await setDoc(userRef, {
+      email: email || null,
+      createdAt: serverTimestamp(),
+    });
   }
 
   if (!email) {
@@ -36,12 +49,12 @@ export async function handleAppleLogin() {
     throw new Error("このメールアドレスではログインできません。");
   }
 
-  // 初回だけ users を作成
+  // users が無ければ詳細を保存（Googleと同じ）
   if (!snap.exists()) {
     await setDoc(userRef, {
-      email: email || null,
+      email,
       name: user.displayName ?? "",
-      provider: "apple.com",
+      provider: "apple",
       createdAt: serverTimestamp(),
     });
   }

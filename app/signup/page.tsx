@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./signup.module.css";
-
 import { signupWithEmailPassword } from "./lib/signupActions";
 import { requestApproval } from "./lib/approvalActions";
 
@@ -28,22 +27,25 @@ export default function SignUpPage() {
     try {
       await signupWithEmailPassword({ email, password, confirmPassword });
       router.push("/profile");
-    } catch (e: any) {
-      setError(e?.message ?? "アカウント作成に失敗しました");
+    } catch (e) {
+      console.warn("signup error:", e);
+      if (e instanceof Error) setError(e.message);
+      else setError("アカウント作成に失敗しました");
     }
   }
 
   async function handleRequestApproval() {
     setError("");
-    setRequestStatus("");
+    setRequestStatus(""); 
 
     try {
       await requestApproval(requestEmail);
       setRequestEmail("");
       setRequestStatus("許可申請を送信しました。承認されると登録できるようになります。");
-    } catch (e: any) {
-      console.error(e);
-      setRequestStatus(e?.message ?? "許可申請の送信に失敗しました。");
+    } catch (e) {
+      console.warn("requestApproval error:", e);
+      if (e instanceof Error) setRequestStatus(e.message);
+      else setRequestStatus("許可申請の送信に失敗しました。");
     }
   }
 

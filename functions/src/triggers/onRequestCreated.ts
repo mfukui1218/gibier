@@ -32,10 +32,10 @@ export const onRequestCreated = onDocumentCreated(
     }
 
     // 表示用テキスト
-    const animal = String(data.animal ?? "");
-    const part = String(data.part ?? "");
-    const grams = String(data.grams ?? "");
-    const text = `${animal ? animal + " " : ""}${part}${grams ? ` / ${grams}g` : ""}`.trim();
+    const part = String(data.partId ?? "");
+    const email = String(data.userEmail ?? "");
+    const grams = String(data.amount ?? "");
+    const text = `${"part:" + part + " \n"}${"email:" + email + " \n"}${`${grams}g`}`.trim();
 
     // --- アプリ内通知（DB） ---
     await db.collection("adminNotifications").add({

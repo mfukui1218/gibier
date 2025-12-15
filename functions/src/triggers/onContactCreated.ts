@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getAdminTokens } from "../lib/adminTokens";
 import { sendPushToAdmins } from "../lib/push";
+import { shouldProcessOnce } from "../lib/dedupe";
 
 const db = admin.firestore();
 
@@ -12,6 +13,13 @@ export const onContactCreated = onDocumentCreated(
     region: "us-central1",
   },
   async (event) => {
+    console.log("🔥 onRequestCreated fired");
+    console.log("🔥 onRequestCreated fired");
+    const ok = await shouldProcessOnce(`request_${event.params.contactId}`);
+    if (!ok) {
+      console.log("🟡 duplicate detected -> skip");
+      return;
+    }
     const data = event.data?.data();
     if (!data) return;
 
