@@ -1,83 +1,54 @@
 "use client";
 
-import { OAuthProvider, signInWithPopup, getAdditionalUserInfo } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { db } from "@/lib/firebase";
+import { OAuthProvider, signInWithPopup, getAdditionalUserInfo, signOut } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { checkAllowedOrAdmin } from "../lib/authGate";
 
-export default function AppleLoginButton({
-  onError,
-  onSuccess,
-  className,
-}: {
-  onError: (msg: string) => void;
-  onSuccess: () => void;
-  className?: string;
-}) {
-  async function handleAppleLogin() {
-    onError("");
-    try {
-      const provider = new OAuthProvider("apple.com");
-      provider.addScope("email");
-      provider.addScope("name");
+export async function handleAppleLogin() {
+  const provider = new OAuthProvider("apple.com");
+  provider.addScope("email");
+  provider.addScope("name");
 
-      const result = await signInWithPopup(auth, provider);
+  const result = await signInWithPopup(auth, provider);
 
-      const user = result.user;
-      const email = user.email?.toLowerCase() ?? "";
-      const info = getAdditionalUserInfo(result);
+  const user = result.user;
+  const info = getAdditionalUserInfo(result);
 
-      // 初回ログインのときだけ users を作成（最低限）
-      if (info?.isNewUser) {
-        await setDoc(doc(db, "users", user.uid), {
-          email: user.email ?? null,
-          createdAt: serverTimestamp(),
-        });
-      }
+  const userRef = doc(db, "users", user.uid);
+  const snap = await getDoc(userRef);
 
-      // Apple は2回目以降 email が空になることがある → 弾く方針のまま
-      if (!email) {
-        await user.delete();
-        onError("Apple からメールを取得できませんでした。");
-        return;
-      }
-
-      const allowed = await checkAllowedOrAdmin(email);
-      if (!allowed) {
-        await user.delete();
-        onError("このメールアドレスではログインできません。");
-        return;
-      }
-
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-
-      if (!snap.exists()) {
-        await setDoc(userRef, {
-          email,
-          name: user.displayName ?? "",
-          provider: "apple",
-          createdAt: serverTimestamp(),
-        });
-      }
-
-      onSuccess();
-    } catch (err: any) {
-      console.error(err);
-      if (err?.code === "auth/popup-closed-by-user") return;
-
-      if (err?.code === "auth/account-exists-with-different-credential") {
-        onError("別の方法で登録済みです。メールアドレスでログインしてください。");
-      } else {
-        onError("Appleログインに失敗しました");
-      }
-    }
+  // Appleは2回目以降emailが空になりがち → Firestore保存値で救済
+  let email = user.email?.toLowerCase().trim() ?? "";
+  if (!email && snap.exists()) {
+    const saved = snap.data()?.email;
+    if (typeof saved === "string") email = saved.toLowerCase().trim();
   }
 
-  return (
-    <button type="button" onClick={handleAppleLogin} className={className}>
-      Appleでログイン
-    </button>
-  );
+  if (info?.isNewUser && !snap.exists()) {
+    await setDoc(userRef, {
+      email: email || null,
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  if (!email) {
+    await signOut(auth);
+    throw new Error("Apple からメールが取得できませんでした。");
+  }
+
+  const allowed = await checkAllowedOrAdmin(email);
+  if (!allowed) {
+    await signOut(auth);
+    throw new Error("このメールアドレスではログインできません。");
+  }
+
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      email,
+      name: user.displayName ?? "",
+      provider: "apple.com",
+      createdAt: serverTimestamp(),
+    });
+  }
 }
