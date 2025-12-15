@@ -6,23 +6,24 @@ import * as admin from "firebase-admin";
  */
 export async function shouldProcessOnce(key: string) {
   const db = admin.firestore();
-
-  // コレクション名は何でもOK（先頭アンダースコアで「内部用」っぽく）
   const ref = db.doc(`_dedupe/${key}`);
 
+  const now = admin.firestore.Timestamp.now();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(
+    Date.now() + 1000 * 60 * 60 // 1時間（好きに調整）
+  );
+
   try {
-    // create: 既に存在したら例外になる（=重複）
     await ref.create({
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: now,   // serverTimestampでもOK
+      expiresAt,        // ★ TTL用：成功時に必ず入れる
     });
     return true;
   } catch (e: any) {
-    // 既にある = 重複
     const code = String(e?.code ?? "");
     if (code.includes("already-exists") || code.includes("ALREADY_EXISTS")) {
       return false;
     }
-    // それ以外は本当のエラー
     throw e;
   }
 }
