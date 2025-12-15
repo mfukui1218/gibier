@@ -8,7 +8,7 @@ export default function RedirectPage() {
       <p>
         LINEアプリ内ブラウザではログインが正常に動作しません。
         <br />
-        下のボタンを押して Safari / Chrome で開いてください。
+        下のボタンを押して Safari / Chrome で開いてください
       </p>
 
       <a
