@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db, app } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { isEmailAllowed } from "@/lib/authRules";
 import styles from "./signup.module.css";
 
-const ADMIN_EMAIL = "ttnetnzua@gmail.com";
+import { signupWithEmailPassword } from "./lib/signupActions";
+import { requestApproval } from "./lib/approvalActions";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -21,79 +17,33 @@ export default function SignUpPage() {
 
   // 許可申請用
   const [requestEmail, setRequestEmail] = useState("");
-
   const [error, setError] = useState("");
   const [requestStatus, setRequestStatus] = useState("");
 
-  // アカウント作成
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setRequestStatus("");
 
     try {
-      if (password !== confirmPassword) {
-        setError("パスワードが一致しません");
-        return;
-      }
-
-      const normalized = email.trim().toLowerCase();
-      let allowed = false;
-
-      if (normalized === ADMIN_EMAIL.toLowerCase()) {
-        allowed = true;
-      } else {
-        allowed = await isEmailAllowed(normalized);
-      }
-
-      if (!allowed) {
-        setError(
-          "このメールアドレスでは現在登録できません。下の許可申請フォームから申請できます。"
-        );
-        return;
-      }
-
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        normalized,
-        password
-      );
-      const user = cred.user;
-
-      await setDoc(doc(db, "users", user.uid), {
-        email: normalized,
-        createdAt: serverTimestamp(),
-      });
-
+      await signupWithEmailPassword({ email, password, confirmPassword });
       router.push("/profile");
-    } catch (err: any) {
-      console.error(err);
-      setError("アカウント作成に失敗しました");
+    } catch (e: any) {
+      setError(e?.message ?? "アカウント作成に失敗しました");
     }
   }
 
-  // 許可申請の送信
   async function handleRequestApproval() {
-    setRequestStatus("");
     setError("");
-
-    if (!requestEmail) {
-      setError("許可申請するメールアドレスを入力してください。");
-      return;
-    }
+    setRequestStatus("");
 
     try {
-      const functions = getFunctions(app, "us-central1");
-      const requestAllowEmail = httpsCallable(functions, "requestAllowEmail");
-      await requestAllowEmail({ email: requestEmail });
+      await requestApproval(requestEmail);
       setRequestEmail("");
-
-      setRequestStatus(
-        "許可申請を送信しました。承認されると登録できるようになります。"
-      );
-    } catch (err) {
-      console.error(err);
-      setRequestStatus("許可申請の送信に失敗しました。");
+      setRequestStatus("許可申請を送信しました。承認されると登録できるようになります。");
+    } catch (e: any) {
+      console.error(e);
+      setRequestStatus(e?.message ?? "許可申請の送信に失敗しました。");
     }
   }
 
@@ -102,7 +52,6 @@ export default function SignUpPage() {
       <div className={styles.card}>
         <h1 className={styles.title}>アカウント作成</h1>
 
-        {/* 登録フォーム */}
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             type="email"
@@ -146,7 +95,6 @@ export default function SignUpPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {/* 許可申請フォーム */}
         <div className={styles.requestSection}>
           <h3 className={styles.requestTitle}>許可申請（登録できない場合）</h3>
 
@@ -158,17 +106,11 @@ export default function SignUpPage() {
             className={styles.input}
           />
 
-          <button
-            type="button"
-            onClick={handleRequestApproval}
-            className={styles.button}
-          >
+          <button type="button" onClick={handleRequestApproval} className={styles.button}>
             許可申請を送信する
           </button>
 
-          {requestStatus && (
-            <p className={styles.requestStatus}>{requestStatus}</p>
-          )}
+          {requestStatus && <p className={styles.requestStatus}>{requestStatus}</p>}
         </div>
       </div>
     </main>
