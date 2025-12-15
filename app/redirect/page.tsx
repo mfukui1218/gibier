@@ -12,7 +12,7 @@ export default function RedirectPage() {
       </p>
 
       <a
-        href="/login"
+  		href="https://gibier.app/login"
         target="_blank"
         rel="noopener noreferrer"
         style={{
