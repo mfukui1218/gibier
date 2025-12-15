@@ -3,7 +3,7 @@
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase";
 
-const REGION = "asia-northeast1"; // ← Functions のデプロイ先に合わせて統一
+const REGION = "us-central1"; // ← Functions のデプロイ先に合わせて統一
 
 export async function requestApproval(requestEmail: string) {
   const email = requestEmail.trim().toLowerCase();
