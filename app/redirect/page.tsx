@@ -8,7 +8,10 @@ export default function RedirectPage() {
       <p>
         LINEアプリ内ブラウザではログインが正常に動作しません。
         <br />
-        下のボタンを押して Safari / Chrome で開いてください
+		※ LINE内ブラウザではログインできません
+		右下の「︙」→「ブラウザで開く」を選んでください。
+		<br />
+		その後、”アカウントを作る”で開いてください
       </p>
 
       <a
@@ -25,7 +28,7 @@ export default function RedirectPage() {
           textDecoration: "none",
         }}
       >
-        外部ブラウザで開く
+		アカウントを作る
       </a>
     </main>
   );
