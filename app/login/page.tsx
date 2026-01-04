@@ -4,8 +4,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import "./login.css";
-import {handleGoogleLogin} from "./components/GoogleLoginButton"
-import {handleAppleLogin} from "./components/AppleLoginButton"
 import {loginWithEmailPassword}from "./lib/loginActions"
 
 export default function LoginPage() {
@@ -28,30 +26,6 @@ export default function LoginPage() {
       } else {
         setError("ログインに失敗しました");
       }
-    }
-  }
-
-  async function onGoogleClick() {
-    setError("");
-    try {
-      await handleGoogleLogin();
-      router.push("/profile");
-    } catch (e) {
-      console.warn(e);
-      if (e instanceof Error) setError(e.message);
-      else setError("Googleログインに失敗しました");
-    }
-  }
-
-  async function onAppleClick() {
-    setError("");
-    try {
-      await handleAppleLogin();
-      router.push("/profile");
-    } catch (e) {
-      console.warn(e);
-      if (e instanceof Error) setError(e.message);
-      else setError("Appleログインに失敗しました");
     }
   }
 
@@ -79,22 +53,6 @@ export default function LoginPage() {
 
           <button type="submit" className="login-button">
             ログイン
-          </button>
-
-          <button
-            type="button"
-            onClick={onGoogleClick}
-            className="login-button"
-          >
-            Googleでログイン
-          </button>
-
-          <button
-            type="button"
-            onClick={onAppleClick}
-            className="login-button"
-          >
-            Appleでログイン
           </button>
 
           <button
