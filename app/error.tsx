@@ -1,4 +1,4 @@
-あe client';
+'use client';
 
 import { useEffect } from 'react';
 
