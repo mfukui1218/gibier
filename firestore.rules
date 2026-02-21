@@ -1,18 +1,77 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 11, 28);
+    // 管理者メールアドレス
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'ttnetnzua@gmail.com';
+    }
+
+    // ログイン済みユーザー
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // allowedEmails: 管理者のみ読み書き可能
+    match /allowedEmails/{email} {
+      allow read, write: if isAdmin();
+    }
+
+    // allowRequests: 誰でも作成可能、管理者は読み書き可能
+    match /allowRequests/{requestId} {
+      allow create: if true;
+      allow read, write: if isAdmin();
+    }
+
+    // users: 本人または管理者が読み書き可能
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // adminTokens: 管理者のみ読み書き可能
+    match /adminTokens/{tokenId} {
+      allow read, write: if isAdmin();
+    }
+
+    // adminNotifications: 管理者のみ読み書き可能
+    match /adminNotifications/{notificationId} {
+      allow read, write: if isAdmin();
+    }
+
+    // traps: 認証済みユーザーは読み取り可能、管理者は書き込み可能
+    match /traps/{trapId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // parts: 認証済みユーザーは読み取り可能、管理者は書き込み可能
+    match /parts/{partId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // harvests: 認証済みユーザーは読み取り可能、管理者は書き込み可能
+    match /harvests/{harvestId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // requests: 認証済みユーザーは自分のリクエストを作成・読み取り可能、管理者は全て読み書き可能
+    match /requests/{requestId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // contacts: 誰でも作成可能、管理者は読み書き可能
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, write: if isAdmin();
+    }
+
+    // _dedupe: Functions内部用、管理者のみ
+    match /_dedupe/{id} {
+      allow read, write: if isAdmin();
     }
   }
 }

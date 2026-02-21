@@ -135,9 +135,9 @@ export default function GibierPage() {
           <button
             type="button"
             className={styles.dashButton}
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/home")}
           >
-            ダッシュボードへ
+            HOMEへ
           </button>
         </div>
       </div>

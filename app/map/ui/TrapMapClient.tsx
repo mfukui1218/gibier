@@ -5,6 +5,14 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaf
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import L from "leaflet";
 
+// Leafletのデフォルトアイコンの問題を修正
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
 type Status = "active" | "inactive" | "hit" | "removed";
 
 export type Trap = {

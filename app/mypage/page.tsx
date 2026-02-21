@@ -86,10 +86,6 @@ export default function MyPage() {
           <h2 className="mypage-section-title">メニュー</h2>
 
           <div className="menu-grid">
-            <Link href="/profile" className="glass-card">
-              <h3>プロフィール設定</h3>
-              <p>設定を変更できます</p>
-            </Link>
 
             <Link href="/home" className="glass-card">
               <h3>HOME</h3>

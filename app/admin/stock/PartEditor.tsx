@@ -106,8 +106,20 @@ export default function PartEditor({
       </label>
 
       <label className="mt-2 flex flex-col gap-1 text-sm">
+        <span>画像URL（直接設定）</span>
+        <input
+          type="text"
+          className="w-full rounded border border-gray-300 px-2 py-1 text-xs"
+          placeholder="https://firebasestorage.googleapis.com/..."
+          value={part.imageUrl}
+          onChange={(e) => onFieldChange(part.id, "imageUrl", e.target.value)}
+          disabled={uploading}
+        />
+      </label>
+
+      <label className="mt-2 flex flex-col gap-1 text-sm">
         <span>
-          画像ファイルをアップロード
+          または画像ファイルをアップロード
           {uploading && <span className="ml-2 text-xs text-gray-500">アップロード中...</span>}
         </span>
         <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
