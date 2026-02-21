@@ -2,6 +2,7 @@
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import RegisterServiceWorker from "./_components/RegisterServiceWorker"; // ★追加
+import DebugClientError from "./_components/DebugClientError";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,8 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontFamily: "system-ui, sans-serif",
         }}
       >
+        <DebugClientError />
         {/* ★ Service Worker 登録（ここで1回だけ） */}
         <RegisterServiceWorker />
+
 
         {/* 背景画像 */}
         <div
