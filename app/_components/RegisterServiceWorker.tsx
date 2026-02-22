@@ -1,53 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
+
+function isLineInApp(): boolean {
+  try {
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes("line") || ua.includes("liff");
+  } catch {
+    // 例外が出る環境は全部スキップ
+    return true;
+  }
+}
 
 export default function RegisterServiceWorker() {
-  const [isLineApp, setIsLineApp] = useState(false);
+  const skip = useMemo(() => isLineInApp(), []);
 
   useEffect(() => {
-    // LINEアプリ内ブラウザを検出
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isLine = userAgent.includes('line/');
-    setIsLineApp(isLine);
+    if (skip) return;
 
-    // Service Workerをサポートしていない、またはLINEアプリの場合はスキップ
-    if (!("serviceWorker" in navigator) || isLine) {
-      console.log("Service Worker not supported or in LINE app");
-      return;
+    try {
+      if (!("serviceWorker" in navigator)) return;
+
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .catch(() => {
+          /* non-critical */
+        });
+    } catch {
+      /* non-critical */
     }
-
-    // エラーが発生してもアプリが動作するように try-catch で囲む
-    navigator.serviceWorker
-      .register("/firebase-messaging-sw.js")
-      .then((registration) => {
-        console.log("SW registered:", registration.scope);
-      })
-      .catch((err) => {
-        console.warn("SW registration failed (non-critical):", err);
-        // エラーを握りつぶす - アプリは続行できる
-      });
-  }, []);
-
-  // LINEアプリの場合は外部ブラウザで開くように促す
-  if (isLineApp) {
-    return (
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '12px',
-        backgroundColor: '#06c755',
-        color: 'white',
-        textAlign: 'center',
-        fontSize: '14px',
-        zIndex: 9999
-      }}>
-        右上の「...」から「Safari/Chromeで開く」を選択してください
-      </div>
-    );
-  }
+  }, [skip]);
 
   return null;
 }

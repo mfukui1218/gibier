@@ -1,10 +1,13 @@
 // app/layout.tsx
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
-import RegisterServiceWorker from "./_components/RegisterServiceWorker"; // ★追加
-import DebugClientError from "./_components/DebugClientError";
+import ClientRoot from "./_components/ClientRoot";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ja">
       <body
@@ -16,10 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        <DebugClientError />
-        {/* ★ Service Worker 登録（ここで1回だけ） */}
-        <RegisterServiceWorker />
-
+        {/* Client 専用処理は全部ここに隔離 */}
+        <ClientRoot />
 
         {/* 背景画像 */}
         <div
