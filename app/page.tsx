@@ -100,7 +100,6 @@ export default function HomePage() {
               利用は
               <span style={{ fontWeight: 600 }}>招待制（許可されたメールアドレスのみ）</span>
               です。
-              まずアカウント作成またはGoogle,Appleにてログインしてください。
             </p>
 
             <div
