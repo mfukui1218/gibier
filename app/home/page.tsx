@@ -35,7 +35,7 @@ export default function HomeHubPage() {
         { title: "マイページ", desc: "ユーザー情報を確認", href: "/mypage" },
         { title: "お問い合わせ", desc: "お問い合わせフォームへ", href: "/contacts" },
         { title: "プロフィール", desc: "プロフィールへ", href: "/profile"},
-        { title: "ログアウト", desc: "いサインアウトする", href: "#logout", variant: "logout" },
+        { title: "ログアウト", desc: "サインアウトする", href: "#logout", variant: "logout" },
         { title: "管理者用", desc: "admin画面へ", href: "/admin", variant: "admin" },
       ]
     : [];
