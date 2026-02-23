@@ -5,11 +5,11 @@ import { useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { app } from "@/lib/firebase";
-import { saveAdminFcmToken} from "@/lib/saveAdminFcmToken";
-import { getMessaging, getToken } from "firebase/messaging";
+import { app } from "@/lib/firebase"; // ※このファイル内で firebase/messaging を import してないことが前提
+import { saveAdminFcmToken } from "@/lib/saveAdminFcmToken";
 
 import styles from "./admin.module.css";
+
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 type MenuItem = { title: string; desc: string; href: string };
@@ -33,13 +33,23 @@ function MenuCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
   );
 }
 
+function canUseMessaging(): boolean {
+  try {
+    const ua = navigator.userAgent.toLowerCase();
+    const isLine = ua.includes("line") || ua.includes("liff");
+    return !isLine && "serviceWorker" in navigator && "Notification" in window;
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminTopPage() {
   const user = useAuthUser();
   const router = useRouter();
   const didInitNotif = useRef(false);
 
   const isAdmin = useMemo(() => {
-    return (user?.email ?? "").toLowerCase() === ADMIN_EMAIL;
+    return (user?.email ?? "").toLowerCase() === (ADMIN_EMAIL ?? "").toLowerCase();
   }, [user]);
 
   useEffect(() => {
@@ -47,25 +57,24 @@ export default function AdminTopPage() {
       if (didInitNotif.current) return;
       if (!user || !isAdmin) return;
 
-      if (!("serviceWorker" in navigator)) {
-        console.log("No serviceWorker env");
-        return;
-      }
+      // LINE内ブラウザやSW非対応は「通知機能だけ」スキップ（ページは動く）
+      if (!canUseMessaging()) return;
 
       const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
-      if (!vapidKey) {
-        console.error("Missing env: NEXT_PUBLIC_FCM_VAPID_KEY");
-        return;
-      }
+      if (!vapidKey) return;
 
+      // 通知許可
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        console.log("Notification permission:", permission);
-        return;
-      }
+      if (permission !== "granted") return;
 
       // 保存失敗で無限リトライしない
       didInitNotif.current = true;
+
+      // ★ここが重要：firebase/messaging をトップレベル import しない
+      const { isSupported, getMessaging, getToken } = await import("firebase/messaging");
+
+      const ok = await isSupported();
+      if (!ok) return;
 
       const messaging = getMessaging(app);
       const swReg = await navigator.serviceWorker.ready;
@@ -75,10 +84,7 @@ export default function AdminTopPage() {
         serviceWorkerRegistration: swReg,
       });
 
-      if (!token) {
-        console.error("No FCM token available");
-        return;
-      }
+      if (!token) return;
 
       await saveAdminFcmToken({
         uid: user.uid,
@@ -87,7 +93,9 @@ export default function AdminTopPage() {
       });
     };
 
-    run().catch((e) => console.error("Notif init failed:", e));
+    run().catch(() => {
+      // non-critical
+    });
   }, [user, isAdmin]);
 
   if (user === undefined) return <main style={{ padding: 24 }}>読み込み中...</main>;

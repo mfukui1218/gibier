@@ -1,13 +1,62 @@
 // app/layout.tsx
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
-import ClientRoot from "@/app/_components/ClientRoot";
+import ClientRoot from "./_components/ClientRoot";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html>
-      <body>
-        {children}
+    <html lang="ja">
+      <body
+        style={{
+          margin: 0,
+          minHeight: "100vh",
+          color: "#fff",
+          position: "relative",
+          fontFamily: "system-ui, sans-serif",
+        }}
+      >
+        {/* Client 専用処理は全部ここに隔離 */}
+        <ClientRoot />
+
+        {/* 背景画像 */}
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundImage: "url('/backgrounds/main.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundAttachment: "fixed",
+            zIndex: -2,
+          }}
+        />
+
+        {/* 暗めのフィルター */}
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: -1,
+          }}
+        />
+
+        {/* ページ本体 */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 0,
+            padding: "32px 24px",
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+          {children}
+        </div>
       </body>
     </html>
   );

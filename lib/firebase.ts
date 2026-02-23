@@ -3,7 +3,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getMessaging, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,38 +13,27 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// 環境変数のチェック
-if (typeof window !== 'undefined') {
+// 環境変数のチェック（任意：そのまま残してOK）
+if (typeof window !== "undefined") {
   const requiredEnvVars = [
-    'NEXT_PUBLIC_FIREBASE_API_KEY',
-    'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-    'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-    'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-    'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-    'NEXT_PUBLIC_FIREBASE_APP_ID',
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "NEXT_PUBLIC_FIREBASE_APP_ID",
   ];
 
-  const missing = requiredEnvVars.filter(varName => !process.env[varName]);
-
+  const missing = requiredEnvVars.filter((varName) => !process.env[varName]);
   if (missing.length > 0) {
-    console.error('Missing Firebase environment variables:', missing);
+    console.error("Missing Firebase environment variables:", missing);
   }
 }
 
-export const app =
-  getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-export const messaging =
-  typeof window !== "undefined" ? getMessaging(app) : null;
-
 export default app;
-
-export async function getMessagingIfSupported() {
-  const ok = await isSupported();
-  return ok ? getMessaging(app) : null;
-}
-
